@@ -1,0 +1,51 @@
+name: 24/7 Autonomous GTA 6 Cloud Clipper
+
+on:
+  schedule:
+    # Runs automatically every 30 minutes in the cloud
+    - cron: '*/30 * * * *'
+  workflow_dispatch: # Allows one-tap manual trigger from your mobile phone!
+
+jobs:
+  run-clipper:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Install Python Dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Cloud Clipper & Auto-Poster
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          TARGET_STREAMERS: ${{ secrets.TARGET_STREAMERS }}
+          CLIP_DURATION: "45"
+        run: |
+          python main.py
+
+      - name: Save Generated Shorts as Cloud Artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gta6-shorts
+          path: output/*.mp4
+          retention-days: 7
