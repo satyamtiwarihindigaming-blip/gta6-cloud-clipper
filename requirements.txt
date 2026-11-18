@@ -1,8 +1,11 @@
+yt-dlp>=2025.01.0
+faster-whisper>=1.0.0
+soundfile>=0.12.0
+numpy>=1.26.0
+opencv-python>=4.10.0
+swift-f0>=0.3
 streamlink>=6.0.0
-yt-dlp>=2024.0.0
 google-generativeai>=0.8.0
 requests>=2.31.0
-google-api-python-client>=2.100.0
-google-auth-oauthlib>=1.2.0
-google-auth-httplib2>=0.2.0
+youtube-transcript-api>=0.6.0
 python-dotenv>=1.0.0

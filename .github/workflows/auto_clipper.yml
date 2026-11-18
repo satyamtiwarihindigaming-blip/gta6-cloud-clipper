@@ -1,4 +1,4 @@
-name: 24/7 Autonomous GTA 6 Cloud Clipper (with Deep Clip)
+name: 24/7 Autonomous GTA 6 Cloud Clipper (ClipKaro & Deep Clip)
 
 on:
   schedule:
@@ -7,9 +7,13 @@ on:
   workflow_dispatch:
     inputs:
       stream_url:
-        description: 'Direct Stream / Video URL (e.g. YouTube or Twitch link)'
+        description: 'Direct Stream or Video URL to Clip'
         required: false
         default: ''
+      mode:
+        description: 'Clipping Mode (deep / instant / auto)'
+        required: false
+        default: 'deep'
 
 jobs:
   run-clipper:
@@ -26,18 +30,17 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
 
-      - name: Install FFmpeg
+      - name: Install FFmpeg (with libass)
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg
+          sudo apt-get install -y ffmpeg libass-dev
 
       - name: Install Python Dependencies
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
-          pip install youtube-transcript-api
 
-      - name: Run Deep Clip or Autonomous Auto-Poster
+      - name: Run ClipKaro Deep Clip Engine
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -45,13 +48,15 @@ jobs:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           TARGET_STREAMERS: ${{ secrets.TARGET_STREAMERS }}
           INPUT_STREAM_URL: ${{ github.event.inputs.stream_url }}
+          MODE: ${{ github.event.inputs.mode }}
           CLIP_DURATION: "45"
         run: |
           if [ -n "$INPUT_STREAM_URL" ]; then
-            echo "Running Deep Clip on custom URL: $INPUT_STREAM_URL"
+            echo "🎯 Running ClipKaro on Direct Stream URL: $INPUT_STREAM_URL"
+            python run.py info "$INPUT_STREAM_URL" || true
             python deepclip_stream.py --url "$INPUT_STREAM_URL" --layout "vertical-blur"
           else
-            echo "Running 24/7 autonomous live streamer clipping"
+            echo "⚡ Running 24/7 autonomous live streamer clipping"
             python main.py
           fi
 
