@@ -4,6 +4,10 @@ import argparse
 import subprocess
 import json
 import re
+import time
+from src.ai_generator import generate_viral_metadata
+from src.uploader import upload_to_socials
+from src.telegram_notifier import notify_user
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Deep Clip Direct Stream & Video Clipper")
@@ -34,7 +38,6 @@ def cut_clip_ffmpeg(input_source: str, start_time: str, duration: int, output_fi
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
     
     if layout == "vertical-blur":
-        # Deep Clip standard 9:16 vertical blur layout
         filter_complex = (
             "[0:v]scale=1080:1920:force_original_aspect_ratio=increase,"
             "crop=1080:1920,boxblur=25:5[bg];"
@@ -67,10 +70,9 @@ def cut_clip_ffmpeg(input_source: str, start_time: str, duration: int, output_fi
         
     print(f"Cutting clip to {output_file}...")
     subprocess.run(cmd, check=True)
-    print(f" Clip ready: {output_file}")
+    print(f"Clip ready: {output_file}")
 
 def clip_live_stream(stream_url: str, duration: int, output_file: str, layout: str):
-    """Deep Clip live stream handler: grabs live buffer & reframes"""
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
     temp_raw = output_file.replace(".mp4", "_raw.mp4")
     
@@ -84,7 +86,6 @@ def clip_live_stream(stream_url: str, duration: int, output_file: str, layout: s
         p1.stdout.close()
         p1.wait()
         
-        # Now apply Deep Clip layout
         cut_clip_ffmpeg(temp_raw, "0", duration, output_file, layout=layout)
         if os.path.exists(temp_raw):
             os.remove(temp_raw)
@@ -96,15 +97,15 @@ def clip_live_stream(stream_url: str, duration: int, output_file: str, layout: s
 def main():
     args = parse_args()
     print("=" * 60)
-    print("🎬 DEEP CLIP: DIRECT STREAM CLIPPER ACTIVATED")
-    print(f"🔗 Target Stream URL: {args.url}")
-    print(f"📐 Layout Format: {args.layout}")
+    print("?? DEEP CLIP: DIRECT STREAM CLIPPER ACTIVATED")
+    print(f"?? Target Stream URL: {args.url}")
+    print(f"?? Layout Format: {args.layout}")
     print("=" * 60)
     
     os.makedirs(args.output, exist_ok=True)
-    output_clip = os.path.join(args.output, f"deepclip_{int(time.time())}.mp4") if 'time' in globals() else os.path.join(args.output, "deepclip_output.mp4")
+    ts = int(time.time())
+    output_clip = os.path.join(args.output, f"deepclip_{ts}.mp4")
     
-    # Check if it's a live stream or VOD
     video_id = extract_youtube_video_id(args.url) if is_youtube_url(args.url) else None
     
     transcript = None
@@ -113,12 +114,10 @@ def main():
         transcript = get_youtube_transcript(video_id)
         
     if transcript:
-        print(f" Successfully fetched {len(transcript)} transcript lines via Deep Clip!")
+        print(f"Successfully fetched {len(transcript)} transcript lines via Deep Clip!")
         print("Finding viral moments...")
-        # Take the top high energy segment (default first 45s of highlight)
         start_time = transcript[0]['start'] if transcript else 0
         
-        # Download and cut
         yt_cmd = [
             "yt-dlp",
             "-g",
@@ -128,14 +127,22 @@ def main():
         stream_direct_url = subprocess.check_output(yt_cmd, text=True).strip().split("\n")[0]
         cut_clip_ffmpeg(stream_direct_url, str(start_time), args.duration, output_clip, layout=args.layout)
     else:
-        # Live stream direct clipping
         print("Clipping live stream directly...")
         clip_live_stream(args.url, args.duration, output_clip, args.layout)
         
     print("=" * 60)
-    print(f"✅ DEEP CLIP COMPLETED! Clip saved to: {output_clip}")
+    print(f"? DEEP CLIP COMPLETED! Clip saved to: {output_clip}")
+    
+    # Generate Metadata & Automatically Post to YouTube Shorts
+    if os.path.exists(output_clip):
+        streamer_tag = "GTA 6"
+        title, desc, tags = generate_viral_metadata(streamer_tag)
+        print(f"?? Auto-Generated Title: {title}")
+        print(f"?? Uploading directly to YouTube Shorts...")
+        upload_to_socials(output_clip, title, desc, tags)
+        notify_user(title, tags, output_clip)
+        
     print("=" * 60)
 
 if __name__ == "__main__":
-    import time
     main()
