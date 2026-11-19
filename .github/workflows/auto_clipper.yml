@@ -37,15 +37,23 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Start bgutil-ytdlp-pot-provider (Docker Sidecar for Cloud Bot-Bypass)
+        run: |
+          docker run --name bgutil-provider -d --init \
+            -p 127.0.0.1:4416:4416 \
+            brainicism/bgutil-ytdlp-pot-provider:latest
+          sleep 4
+          docker ps
+
       - name: Install FFmpeg with Libass
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg libass-dev
 
-      - name: Install Latest Dependencies
+      - name: Install Latest Dependencies & POT Provider Plugin
         run: |
-          pip install --upgrade pip
-          pip install --upgrade "git+https://github.com/yt-dlp/yt-dlp.git" requests python-dotenv
+          python -m pip install --upgrade pip
+          python -m pip install -U yt-dlp bgutil-ytdlp-pot-provider requests python-dotenv
 
       - name: Run Autonomous Cloud Clipper Engine
         env:

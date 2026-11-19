@@ -24,7 +24,6 @@ def find_target_video() -> tuple[str, str, str]:
     Finds the latest Techno Gamerz GTA 6 video/stream or top Indian creator video.
     Returns (video_id, video_url, creator_name).
     """
-    # Check manual input or environment override first
     custom_url = os.getenv("CUSTOM_URL")
     if custom_url and "v=" in custom_url:
         vid_id = custom_url.split("v=")[1].split("&")[0]
@@ -41,7 +40,6 @@ def find_target_video() -> tuple[str, str, str]:
         print(f"[Scanner] Searching YouTube for: '{query}'...")
         cmd = [
             "yt-dlp",
-            "--extractor-args", "youtube:player_client=ios,android",
             f"ytsearch5:{query}",
             "--get-id",
             "--get-title"
@@ -73,7 +71,6 @@ def download_subtitles_and_find_viral_moment(video_id: str, temp_dir: str) -> tu
     print(f"[VTT] Downloading auto-subs for {video_id}...")
     cmd = [
         "yt-dlp",
-        "--extractor-args", "youtube:player_client=ios,android",
         "--skip-download",
         "--write-auto-subs",
         "--sub-lang", "hi-orig,hi,en",
@@ -93,9 +90,8 @@ def download_subtitles_and_find_viral_moment(video_id: str, temp_dir: str) -> tu
     history = load_history()
     used_moments = history.get("processed_moments", [])
 
-    # Default fallback moment if subs not found
-    default_start = 720.0  # 12:00
-    default_end = 768.0    # 12:48
+    default_start = 720.0
+    default_end = 768.0
 
     if not vtt_file or not os.path.exists(vtt_file):
         print("[VTT] No subtitle track found. Using high-action fallback window.")
