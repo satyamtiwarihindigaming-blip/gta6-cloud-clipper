@@ -24,6 +24,12 @@ def find_target_video() -> tuple[str, str, str]:
     Finds the latest Techno Gamerz GTA 6 video/stream or top Indian creator video.
     Returns (video_id, video_url, creator_name).
     """
+    # Check manual input or environment override first
+    custom_url = os.getenv("CUSTOM_URL")
+    if custom_url and "v=" in custom_url:
+        vid_id = custom_url.split("v=")[1].split("&")[0]
+        return vid_id, custom_url, "Techno Gamerz"
+
     search_queries = [
         ("Techno Gamerz GTA 6 Gameplay", "Techno Gamerz"),
         ("Techno Gamerz Vice City Police Chase", "Techno Gamerz"),
@@ -33,11 +39,16 @@ def find_target_video() -> tuple[str, str, str]:
 
     for query, creator in search_queries:
         print(f"[Scanner] Searching YouTube for: '{query}'...")
-        cmd = ["yt-dlp", f"ytsearch5:{query}", "--get-id", "--get-title"]
+        cmd = [
+            "yt-dlp",
+            "--extractor-args", "youtube:player_client=ios,android",
+            f"ytsearch5:{query}",
+            "--get-id",
+            "--get-title"
+        ]
         try:
             res = subprocess.run(cmd, capture_output=True, text=True, timeout=35)
             lines = [l.strip() for l in res.stdout.strip().split("\n") if l.strip()]
-            # yt-dlp outputs alternate title and id
             for i in range(0, len(lines) - 1, 2):
                 title = lines[i]
                 vid_id = lines[i + 1]
@@ -62,6 +73,7 @@ def download_subtitles_and_find_viral_moment(video_id: str, temp_dir: str) -> tu
     print(f"[VTT] Downloading auto-subs for {video_id}...")
     cmd = [
         "yt-dlp",
+        "--extractor-args", "youtube:player_client=ios,android",
         "--skip-download",
         "--write-auto-subs",
         "--sub-lang", "hi-orig,hi,en",
@@ -82,24 +94,21 @@ def download_subtitles_and_find_viral_moment(video_id: str, temp_dir: str) -> tu
     used_moments = history.get("processed_moments", [])
 
     # Default fallback moment if subs not found
-    default_start = 650.0  # 10:50
-    default_end = 698.0    # 11:38
+    default_start = 720.0  # 12:00
+    default_end = 768.0    # 12:48
 
     if not vtt_file or not os.path.exists(vtt_file):
         print("[VTT] No subtitle track found. Using high-action fallback window.")
         return default_start, default_end, None, []
 
-    # Parse all speech segments from VTT to find peak speaking intensity
     from src.word_captions import to_sec
     with open(vtt_file, "r", encoding="utf-8", errors="ignore") as f:
         vtt_content = f.read()
 
-    # Extract all timestamped words
     matches = list(re.finditer(r'<(\d{2}:\d{2}:\d{2}\.\d{3})><c>\s*([^<]+)</c>', vtt_content))
     if len(matches) < 20:
         return default_start, default_end, vtt_file, []
 
-    # Score 48-second sliding windows by words per second (high speech intensity = excitement)
     all_words = []
     for m in matches:
         sec = to_sec(m.group(1))
@@ -111,13 +120,11 @@ def download_subtitles_and_find_viral_moment(video_id: str, temp_dir: str) -> tu
     best_start = default_start
     best_score = -1
 
-    # Check candidates starting from 2 minutes in up to total duration - 1 min
     min_time = 120.0
     max_time = all_words[-1][0] - window_size if all_words else 800.0
 
     curr = min_time
     while curr < max_time:
-        # Check if this slice overlaps with any used moment
         overlap = any(abs(curr - m_start) < 40 for m_start in used_moments if m_start)
         if not overlap:
             words_in_window = [w for s, w in all_words if curr <= s <= curr + window_size]
@@ -130,7 +137,6 @@ def download_subtitles_and_find_viral_moment(video_id: str, temp_dir: str) -> tu
     best_end = best_start + window_size
     print(f"[VTT] Selected Best Viral Speech Window: {best_start:.1f}s to {best_end:.1f}s ({best_score} spoken words)")
 
-    # Extract word list for the chosen window
     chosen_words = []
     for sec, w in all_words:
         if best_start <= sec <= best_end:
