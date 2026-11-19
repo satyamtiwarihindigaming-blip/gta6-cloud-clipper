@@ -32,6 +32,11 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
 
+      - name: Set up Deno (Official JS Runtime for yt-dlp)
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
       - name: Set up Node.js (Latest LTS)
         uses: actions/setup-node@v4
         with:
@@ -42,9 +47,9 @@ jobs:
           docker run --name bgutil-provider -d --init \
             -p 127.0.0.1:4416:4416 \
             brainicism/bgutil-ytdlp-pot-provider:latest
-          sleep 5
+          sleep 6
           docker ps
-          curl -s http://127.0.0.1:4416/ping || echo "bgutil starting up"
+          curl -s http://127.0.0.1:4416/ping || echo "bgutil started"
 
       - name: Install FFmpeg with Libass
         run: |
@@ -56,15 +61,23 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -U yt-dlp bgutil-ytdlp-pot-provider requests python-dotenv
 
-      - name: Configure Global yt-dlp Settings
+      - name: Configure Global yt-dlp Settings & Plugins
         run: |
-          mkdir -p ~/.config/yt-dlp
+          mkdir -p ~/.config/yt-dlp/plugins/bgutil
+          SITE_DIR=$(python -c "import site; print(site.getsitepackages()[0])")
+          if [ -d "$SITE_DIR/yt_dlp_plugins" ]; then
+            cp -r "$SITE_DIR/yt_dlp_plugins" ~/.config/yt-dlp/plugins/bgutil/
+            echo "Installed yt_dlp_plugins to ~/.config/yt-dlp/plugins/bgutil/"
+          fi
+          
           cat << 'EOF' > ~/.config/yt-dlp/config
+          --js-runtimes deno,node
           --extractor-args "youtubepot-bgutilhttp:base_url=http://127.0.0.1:4416"
-          --extractor-args "youtube:player_client=mweb,android,web"
+          --extractor-args "youtube:player_client=mweb,web"
           --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
           EOF
           sudo cp ~/.config/yt-dlp/config /etc/yt-dlp.conf
+          yt-dlp -v || true
 
       - name: Run Autonomous Cloud Clipper Engine
         env:
