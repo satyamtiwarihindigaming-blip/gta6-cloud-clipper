@@ -29,8 +29,8 @@ def run():
         print("❌ Could not extract video segment.")
         sys.exit(1)
         
-    # Step 3: Reframing 16:9 -> 9:16 Vertical Short
-    reframed = convert_to_vertical_short(raw_video, vertical_video)
+    # Step 3: Reframing 16:9 -> 9:16 Viral Split Screen (Facecam Top + Gameplay Bottom + Dynamic Captions)
+    reframed = convert_to_vertical_short(raw_video, vertical_video, creator_name=creator_name)
     if not reframed:
         print("❌ Reframing failed.")
         sys.exit(1)
