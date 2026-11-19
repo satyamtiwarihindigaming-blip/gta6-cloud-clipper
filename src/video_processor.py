@@ -25,24 +25,19 @@ Style: PopWhite,Impact,70,&H00FFFFFF,&H0000FFFF,&H00000000,&H90000000,-1,0,0,0,1
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 """
     bursts = [
-        ("PopYellow", "{\\fscx115\\fscy115}BRO WAIT! 😱{\\r}"),
-        ("PopWhite", "LOOK AT THIS!!"),
-        ("PopGreen", "{\\fscx120\\fscy120}IS THIS GTA 6?! 🤯{\\r}"),
-        ("PopCyan", "{\\fscx115\\fscy115}VICE CITY BEACH! 🏖️{\\r}"),
-        ("PopRed", "OH MY GOD!! 💀"),
-        ("PopGreen", "{\\fscx120\\fscy120}THE GRAPHICS ARE UNREAL! 🔥{\\r}"),
-        ("PopCyan", "ROCKSTAR COOKED!! 👨‍🍳"),
+        ("PopYellow", "{\\fscx115\\fscy115}BHAI WAIT! 😱{\\r}"),
+        ("PopWhite", "LOOK AT THIS CLUTCH!!"),
+        ("PopGreen", "{\\fscx120\\fscy120}YE KYA HO RAHA HAI?! 🤯{\\r}"),
+        ("PopCyan", "{\\fscx115\\fscy115}NEXT LEVEL STUNT! 🏎️{\\r}"),
+        ("PopRed", "OH BHAI MAARO MUJHE!! 💀"),
+        ("PopGreen", "{\\fscx120\\fscy120}PRO GAMER MOMENT! 🔥{\\r}"),
         ("PopYellow", "{\\fscx125\\fscy125}NO WAY NO WAY! 😂{\\r}"),
-        ("PopWhite", "LOOK AT THAT CAR! 🏎️"),
-        ("PopGreen", "{\\fscx120\\fscy120}POLICE CHASE STARTED! 🚨{\\r}"),
-        ("PopYellow", "5-STAR WANTED LEVEL! 💥"),
-        ("PopCyan", "{\\fscx115\\fscy115}RUN RUN RUN! 🏃💨{\\r}"),
-        ("PopWhite", "HE HIT A COP CAR! 🚓"),
-        ("PopGreen", "{\\fscx125\\fscy125}UNREAL CAR PHYSICS! 💀{\\r}"),
-        ("PopYellow", "HE IS TRAPPED! 🚔😂"),
-        ("PopCyan", "{\\fscx120\\fscy120}THE NEXT-GEN DETAILS! ✨{\\r}"),
-        ("PopRed", "{\\fscx130\\fscy130}GTA 6 GOTY CONFIRMED! 🏆🔥{\\r}"),
-        ("PopYellow", "SUBSCRIBE FOR DAILY CLIPS! 🔔❤️")
+        ("PopWhite", "BALANCE BANAKE RAKH! 💥"),
+        ("PopGreen", "{\\fscx120\\fscy120}BAL BAL BACHE AAJ! 🚨{\\r}"),
+        ("PopYellow", "RECORD TOD DIYA BHAI! 🏆"),
+        ("PopCyan", "{\\fscx115\\fscy115}OP GAMEPLAY IN CHAT! 🎮{\\r}"),
+        ("PopWhite", "UNREAL DRIVING SKILLS! ⚡"),
+        ("PopRed", "{\\fscx130\\fscy130}SUBSCRIBE FOR DAILY LIVE! 🔔❤️{\\r}")
     ]
     
     events = []
@@ -50,7 +45,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     for style, text in bursts:
         if t >= duration - 1:
             break
-        dt = 1.6
+        dt = 1.8
         start_str = f"0:{int(t//60):02d}:{t%60:05.2f}"
         end_str = f"0:{int((t+dt)//60):02d}:{(t+dt)%60:05.2f}"
         events.append(f"Dialogue: 0,{start_str},{end_str},{style},,0,0,0,,{text}\n")
@@ -62,8 +57,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 def convert_to_vertical_short(input_path: str, output_path: str, creator_name: str = "Streamer") -> bool:
     """
     Transforms footage into high-retention 9:16 Vertical Short with:
-    - Top: Streamer Facecam / Action closeup (1080x960)
-    - Bottom: Centered Gameplay (1080x960)
+    - Top: Streamer Facecam / Action closeup (1080x960) with unsharp filter (ZERO BLUR)
+    - Bottom: Centered Gameplay (1080x960) with unsharp filter
     - Middle: CLEAN SPLIT - ZERO text in the middle!
     - Captions: Dynamic Bouncing ASS in Lower Third (MarginV: 240)
     - Loudness normalized audio (-14 LUFS)
@@ -76,10 +71,10 @@ def convert_to_vertical_short(input_path: str, output_path: str, creator_name: s
     
     ass_escaped = ass_path.replace("\\", "/").replace(":", "\\:")
 
-    # Top facecam: 1080x960, Bottom gameplay: 1080x960, Middle clean split (no text)
+    # Top facecam with lanczos scale and unsharp filter for crystal clear sharpness (NO BLUR)
     filter_complex = (
-        "[0:v]crop=in_w*0.45:in_h*0.45:0:in_h*0.35,scale=1080:960:force_original_aspect_ratio=increase,crop=1080:960[top];"
-        "[0:v]crop=in_w*0.65:in_h*0.8:in_w*0.35:0,scale=1080:960:force_original_aspect_ratio=increase,crop=1080:960[bot];"
+        "[0:v]crop=in_w*0.35:in_h*0.45:0:in_h*0.55,scale=1080:960:flags=lanczos,unsharp=5:5:1.0:5:5:0.0[top];"
+        "[0:v]crop=in_w*0.65:in_h*0.8:in_w*0.35:0,scale=1080:960:flags=lanczos,unsharp=5:5:0.8:5:5:0.0[bot];"
         "[top][bot]vstack[vstacked];"
         f"[vstacked]ass='{ass_escaped}'[v];"
         "[0:a]loudnorm=I=-14:TP=-1.5:LRA=11[a]"
@@ -93,7 +88,7 @@ def convert_to_vertical_short(input_path: str, output_path: str, creator_name: s
         "-map", "[a]",
         "-c:v", "libx264",
         "-preset", "veryfast",
-        "-crf", "23",
+        "-crf", "22",
         "-r", "30",
         "-c:a", "aac",
         "-b:a", "128k",
@@ -101,7 +96,7 @@ def convert_to_vertical_short(input_path: str, output_path: str, creator_name: s
         output_path
     ]
     
-    print(f"Running FFmpeg split-screen render (Clean middle, Lower captions): {' '.join(cmd)}")
+    print(f"Running FFmpeg HD split-screen render (Zero Blur, Clean middle): {' '.join(cmd)}")
     res = subprocess.run(cmd, capture_output=True, text=True)
     if res.returncode != 0:
         print(f"FFmpeg render error: {res.stderr[-500:]}")

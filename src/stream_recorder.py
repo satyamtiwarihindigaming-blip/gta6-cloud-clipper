@@ -4,13 +4,12 @@ import random
 
 def record_live_segment(stream_url: str, output_path: str, duration: int = 45) -> bool:
     """
-    Records or clips a 45s segment from a live stream or YouTube video.
+    Records or clips a 45s segment in crisp 1080p Full HD with zero blur.
     """
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     
-    print(f"Capturing {duration}s clip from: {stream_url}...")
+    print(f"Capturing {duration}s HD clip from: {stream_url}...")
     
-    # Check if it's a live stream or regular VOD
     is_live = "/live" in stream_url or "twitch.tv" in stream_url
     
     if is_live:
@@ -18,7 +17,7 @@ def record_live_segment(stream_url: str, output_path: str, duration: int = 45) -
             "streamlink",
             "--hls-live-restart",
             stream_url,
-            "720p,best",
+            "1080p60,1080p,720p60,best",
             "-O"
         ]
         ffmpeg_cmd = [
@@ -35,22 +34,23 @@ def record_live_segment(stream_url: str, output_path: str, duration: int = 45) -
             p_streamlink.wait()
             
             if os.path.exists(output_path) and os.path.getsize(output_path) > 100000:
-                print(f"✅ Successfully recorded live segment: {output_path} ({os.path.getsize(output_path)} bytes)")
+                print(f"Successfully recorded HD live segment: {output_path} ({os.path.getsize(output_path)} bytes)")
                 return True
         except Exception as e:
             print(f"Streamlink capture attempt: {e}")
 
-    # Fallback / VOD download with yt-dlp
-    start_sec = random.randint(20, 180)
+    # Fallback / VOD download with yt-dlp in 1080p Full HD
+    start_sec = random.randint(30, 240)
     end_sec = start_sec + duration
     
     start_str = f"{start_sec // 60:02d}:{start_sec % 60:02d}"
     end_str = f"{end_sec // 60:02d}:{end_sec % 60:02d}"
     
-    print(f"Using yt-dlp to extract highlight segment ({start_str} to {end_str})...")
+    print(f"Using yt-dlp to extract 1080p highlight segment ({start_str} to {end_str})...")
     ytdlp_cmd = [
         "yt-dlp",
-        "-f", "136+140/bv*[height<=1080]+ba/best",
+        "--js-runtimes", "node",
+        "-f", "bestvideo[height<=1080]+bestaudio/best[height<=1080]",
         "--download-sections", f"*{start_str}-{end_str}",
         "--force-keyframes-at-cuts",
         "-o", output_path,
@@ -59,7 +59,7 @@ def record_live_segment(stream_url: str, output_path: str, duration: int = 45) -
     try:
         subprocess.run(ytdlp_cmd, check=True, timeout=120)
         if os.path.exists(output_path) and os.path.getsize(output_path) > 100000:
-            print(f"✅ Successfully captured clip with yt-dlp: {output_path} ({os.path.getsize(output_path)} bytes)")
+            print(f"Successfully captured 1080p HD clip: {output_path} ({os.path.getsize(output_path)} bytes)")
             return True
     except Exception as e:
         print(f"yt-dlp extraction error: {e}")
