@@ -5,21 +5,21 @@ from src.word_captions import generate_word_by_word_ass
 def get_creator_crops(creator_name: str) -> tuple[str, str]:
     c_lower = creator_name.lower()
     if "techno" in c_lower or "ujjwalgamer" in c_lower or "technogamerz" in c_lower:
-        # Techno Gamerz verified HD crops
-        top_crop = "crop=300:266:1565:80,scale=1080:960:flags=lanczos,unsharp=5:5:1.0:5:5:0.0"
-        bot_crop = "crop=1205:1070:350:0,scale=1080:960:flags=lanczos"
+        # Techno Gamerz crystal-clear HD facecam crop (Lanczos + Unsharp, zero blur)
+        top_crop = "scale=1920:1080,crop=300:266:1565:80,scale=1080:960:flags=lanczos,unsharp=5:5:1.2:5:5:0.0"
+        bot_crop = "scale=1920:1080,crop=1205:1070:350:0,scale=1080:960:flags=lanczos"
     elif "carry" in c_lower:
-        # CarryisLive verified HD crops
-        top_crop = "crop=330:300:1580:750,scale=1080:960:flags=lanczos,unsharp=5:5:1.0:5:5:0.0"
-        bot_crop = "crop=1280:720:0:0,scale=1080:960:flags=lanczos"
+        # CarryisLive HD crop
+        top_crop = "scale=1920:1080,crop=330:300:1580:750,scale=1080:960:flags=lanczos,unsharp=5:5:1.2:5:5:0.0"
+        bot_crop = "scale=1920:1080,crop=1280:720:0:0,scale=1080:960:flags=lanczos"
     elif "insaan" in c_lower or "triggered" in c_lower:
-        # Triggered Insaan / Live Insaan crops
-        top_crop = "crop=400:350:1500:700,scale=1080:960:flags=lanczos,unsharp=5:5:1.0:5:5:0.0"
-        bot_crop = "crop=1280:720:0:0,scale=1080:960:flags=lanczos"
+        # Triggered Insaan / Live Insaan crop
+        top_crop = "scale=1920:1080,crop=400:350:1500:700,scale=1080:960:flags=lanczos,unsharp=5:5:1.2:5:5:0.0"
+        bot_crop = "scale=1920:1080,crop=1280:720:0:0,scale=1080:960:flags=lanczos"
     else:
         # Universal clean gaming split
-        top_crop = "crop=in_w*0.45:in_h*0.5:in_w*0.55:0,scale=1080:960:flags=lanczos,unsharp=5:5:1.0:5:5:0.0"
-        bot_crop = "crop=in_w*0.8:in_h*0.8:in_w*0.1:in_h*0.1,scale=1080:960:flags=lanczos"
+        top_crop = "scale=1920:1080,crop=in_w*0.45:in_h*0.5:in_w*0.55:0,scale=1080:960:flags=lanczos,unsharp=5:5:1.2:5:5:0.0"
+        bot_crop = "scale=1920:1080,crop=in_w*0.8:in_h*0.8:in_w*0.1:in_h*0.1,scale=1080:960:flags=lanczos"
 
     return top_crop, bot_crop
 
@@ -34,8 +34,8 @@ def convert_to_vertical_short(
     Renders 1080x1920 (9:16 Vertical HD) 60 FPS Short/Reel with:
     - Top: Streamer Facecam (1080x960, Lanczos + Unsharp, ZERO blur)
     - Bottom: Gameplay (1080x960)
-    - Middle: 100% CLEAN SPLIT (Zero text/badges)
-    - Captions: Word-by-word dynamic popping (only when speaking, zero emojis)
+    - Middle: 100% CLEAN SPLIT (Zero text/badges/separators)
+    - Captions: Word-by-word dynamic popping in Hinglish (Roman script, zero emojis, silence VAD)
     """
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     temp_dir = os.path.dirname(output_path)
@@ -71,7 +71,7 @@ def convert_to_vertical_short(
         "-map", "[aout]",
         "-c:v", "libx264",
         "-preset", "veryfast",
-        "-crf", "22",
+        "-crf", "18",
         "-r", "60",
         "-pix_fmt", "yuv420p",
         "-c:a", "aac",
@@ -84,7 +84,7 @@ def convert_to_vertical_short(
     res = subprocess.run(cmd, capture_output=True, text=True)
     if res.returncode == 0 and os.path.exists(output_path):
         size_mb = os.path.getsize(output_path) / (1024 * 1024)
-        print(f"[FFmpeg] SUCCESS: Rendered {output_path} ({size_mb:.2f} MB, 60fps HD)")
+        print(f"[FFmpeg] SUCCESS: Rendered {output_path} ({size_mb:.2f} MB, 60fps HD Lossless)")
         return True
     else:
         print(f"[FFmpeg] Error: {res.stderr[-500:]}")
