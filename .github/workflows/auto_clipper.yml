@@ -42,8 +42,9 @@ jobs:
           docker run --name bgutil-provider -d --init \
             -p 127.0.0.1:4416:4416 \
             brainicism/bgutil-ytdlp-pot-provider:latest
-          sleep 4
+          sleep 5
           docker ps
+          curl -s http://127.0.0.1:4416/ping || echo "bgutil starting up"
 
       - name: Install FFmpeg with Libass
         run: |
@@ -54,6 +55,16 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -U yt-dlp bgutil-ytdlp-pot-provider requests python-dotenv
+
+      - name: Configure Global yt-dlp Settings
+        run: |
+          mkdir -p ~/.config/yt-dlp
+          cat << 'EOF' > ~/.config/yt-dlp/config
+          --extractor-args "youtubepot-bgutilhttp:base_url=http://127.0.0.1:4416"
+          --extractor-args "youtube:player_client=mweb,android,web"
+          --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+          EOF
+          sudo cp ~/.config/yt-dlp/config /etc/yt-dlp.conf
 
       - name: Run Autonomous Cloud Clipper Engine
         env:

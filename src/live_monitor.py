@@ -1,6 +1,7 @@
 import subprocess
 import json
 import os
+import sys
 import random
 import re
 
@@ -39,7 +40,8 @@ def find_target_video() -> tuple[str, str, str]:
     for query, creator in search_queries:
         print(f"[Scanner] Searching YouTube for: '{query}'...")
         cmd = [
-            "yt-dlp",
+            sys.executable, "-m", "yt_dlp",
+            "--extractor-args", "youtube:player_client=android,web",
             f"ytsearch5:{query}",
             "--get-id",
             "--get-title"
@@ -70,7 +72,9 @@ def download_subtitles_and_find_viral_moment(video_id: str, temp_dir: str) -> tu
     
     print(f"[VTT] Downloading auto-subs for {video_id}...")
     cmd = [
-        "yt-dlp",
+        sys.executable, "-m", "yt_dlp",
+        "--extractor-args", "youtubepot-bgutilhttp:base_url=http://127.0.0.1:4416",
+        "--extractor-args", "youtube:player_client=mweb,android,web",
         "--skip-download",
         "--write-auto-subs",
         "--sub-lang", "hi-orig,hi,en",
@@ -78,7 +82,10 @@ def download_subtitles_and_find_viral_moment(video_id: str, temp_dir: str) -> tu
         "-o", vtt_template,
         f"https://www.youtube.com/watch?v={video_id}"
     ]
-    subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+    try:
+        subprocess.run(cmd, capture_output=True, text=True, timeout=40)
+    except Exception as e:
+        print(f"[VTT] Subtitle fetch error: {e}")
 
     # Find the downloaded vtt file
     vtt_file = None
@@ -93,8 +100,15 @@ def download_subtitles_and_find_viral_moment(video_id: str, temp_dir: str) -> tu
     default_start = 720.0
     default_end = 768.0
 
+    # Advance fallback to next unclipped moment if needed
+    for cand in [720.0, 840.0, 960.0, 1100.0, 1350.0, 1600.0, 1900.0, 2200.0]:
+        if not any(abs(cand - m) < 50 for m in used_moments if m):
+            default_start = cand
+            default_end = cand + 48.0
+            break
+
     if not vtt_file or not os.path.exists(vtt_file):
-        print("[VTT] No subtitle track found. Using high-action fallback window.")
+        print(f"[VTT] No subtitle track found. Using high-action fallback window: {default_start}s to {default_end}s.")
         return default_start, default_end, None, []
 
     from src.word_captions import to_sec
