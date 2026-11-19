@@ -11,7 +11,7 @@ from src.uploader import upload_to_socials
 
 def run():
     print("==================================================")
-    print("🚀 GTA 6 CLOUD CLIPPER: AUTONOMOUS RUN STARTED")
+    print("🚀 GTA 6 & TOP STREAMERS AUTONOMOUS CLOUD CLIPPER")
     print("==================================================")
     
     os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -19,19 +19,14 @@ def run():
     raw_video = os.path.join(OUTPUT_DIR, f"raw_{timestamp}.mp4")
     vertical_video = os.path.join(OUTPUT_DIR, f"short_{timestamp}.mp4")
     
-    # Step 1: Detect live streamer
-    active_streamer = find_active_streamer(TARGET_STREAMERS)
-    if not active_streamer:
-        print("ℹ️ No target streamers currently live. Exiting run peacefully.")
-        sys.exit(0)
-        
-    streamer_name = active_streamer.rstrip("/").split("/")[-1]
-    print(f"🎬 Active Streamer: {streamer_name}")
+    # Step 1: Detect live streamer (Mythpat, Carry, Speed) or GTA 6 trending video
+    active_url, creator_name = find_active_streamer(TARGET_STREAMERS)
+    print(f"🎬 Target Content Selected: {creator_name} ({active_url})")
     
-    # Step 2: Record Live Buffer
-    recorded = record_live_segment(active_streamer, raw_video, duration=CLIP_DURATION)
+    # Step 2: Record/Extract 45s Segment
+    recorded = record_live_segment(active_url, raw_video, duration=CLIP_DURATION)
     if not recorded:
-        print("❌ Could not record segment from stream.")
+        print("❌ Could not extract video segment.")
         sys.exit(1)
         
     # Step 3: Reframing 16:9 -> 9:16 Vertical Short
@@ -40,23 +35,24 @@ def run():
         print("❌ Reframing failed.")
         sys.exit(1)
         
-    # Step 4: Generate Viral Title & Tags
-    title, desc, tags = generate_viral_metadata(streamer_name)
+    # Step 4: Generate Viral Title, Description & Hashtags
+    title, desc, tags = generate_viral_metadata(creator_name)
     print(f"📝 Title: {title}")
+    print(f"📄 Description:\n{desc}")
     print(f"🏷️ Tags: {tags}")
     
-    # Step 5: Post to Socials / Webhooks
+    # Step 5: Post directly to YouTube as PUBLIC Short
     upload_to_socials(vertical_video, title, desc, tags)
     
     # Step 6: Ping Phone via Telegram
     notify_user(title, tags, vertical_video)
     
-    # Clean up raw horizontal file to save cloud runner disk space
+    # Clean up raw file to save disk space
     if os.path.exists(raw_video):
         os.remove(raw_video)
         
     print("==================================================")
-    print("✅ RUN COMPLETED SUCCESSFULLY! PC IS CHILLING.")
+    print("🎉 RUN COMPLETED! SHORT PUBLISHED TO YOUTUBE!")
     print("==================================================")
 
 if __name__ == "__main__":

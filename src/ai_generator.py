@@ -1,55 +1,73 @@
 import random
-import google.generativeai as genai
-from .config import GEMINI_API_KEY
+import os
 
-FALLBACK_TITLES = [
-    "THIS GTA 6 MOMENT BROKE THE INTERNET! 💀🔥 #shorts",
-    "HE FOUND THIS SECRET IN GTA 6?! 😱 #shorts",
-    "THE CRAZIEST POLICE CHASE IN GTA 6! 🚓💥 #shorts",
-    "BRO WAS NOT READY FOR THIS IN GTA 6 😂 #shorts",
-    "IS THIS THE BEST GTA 6 EASTER EGG YET? 🤯 #shorts"
+CREATOR_TAGS = {
+    "mythpat": "#mythpat #mythpatlive #gta6 #gaming #shorts #viral #funny",
+    "carryislive": "#carryislive #carryminati #gta6 #gaming #shorts #viral #funny",
+    "ishowspeed": "#ishowspeed #speed #speedlive #gta6 #gaming #shorts #viral #crazy",
+    "kaicenat": "#kaicenat #kai #amp #gta6 #gaming #shorts #viral",
+    "xqc": "#xqc #xqclive #gta6 #gaming #shorts #viral"
+}
+
+GENERIC_GTA6_TITLES = [
+    "THIS GTA 6 MOMENT IS ABSOLUTELY INSANE! 💀🔥 #shorts",
+    "BRO WAS NOT READY FOR THIS IN GTA 6 😂🚓 #shorts",
+    "THE REALISM IN GTA 6 LOOKS UNREAL! 🤯🏎️ #shorts",
+    "5-STAR WANTED IN GTA 6 VICE CITY! 🚨💥 #shorts",
+    "CRAZIEST POLICE CHASE IN GTA 6 YET! 🏎️💨 #shorts",
+    "WHEN SPEED PLAYS GTA 6 BE LIKE... 💀😂 #shorts"
 ]
-
-FALLBACK_TAGS = "#GTA6 #GTA6Gameplay #GamingShorts #GrandTheftAuto6 #Gaming #Shorts #Viral"
 
 def generate_viral_metadata(streamer_name: str = "Streamer") -> tuple[str, str, str]:
     """
-    Returns (Title, Description, Tags) using Gemini API or smart viral fallbacks.
+    Returns (Title, Description, Tags) tailored to the creator and GTA 6.
     """
-    if GEMINI_API_KEY:
-        try:
-            genai.configure(api_key=GEMINI_API_KEY)
-            model = genai.GenerativeModel("gemini-2.5-flash")
-            prompt = f"""
-            Generate viral social media metadata for a crazy GTA 6 livestream clip from {streamer_name}.
-            Keep title under 65 chars with high-CTR emojis.
-            
-            Return exactly in this format:
-            TITLE: <title>
-            DESCRIPTION: <short 2-sentence description>
-            TAGS: <5-8 hashtags starting with #>
-            """
-            response = model.generate_content(prompt)
-            text = response.text.strip().split("\n")
-            
-            title = None
-            desc = f"Unreal GTA 6 gameplay moment live on stream! Like and subscribe for more GTA 6 clips. #shorts"
-            tags = FALLBACK_TAGS
-            
-            for line in text:
-                if line.startswith("TITLE:"):
-                    title = line.replace("TITLE:", "").strip()
-                elif line.startswith("DESCRIPTION:"):
-                    desc = line.replace("DESCRIPTION:", "").strip()
-                elif line.startswith("TAGS:"):
-                    tags = line.replace("TAGS:", "").strip()
-            
-            if title:
-                return title, desc, tags
-        except Exception as e:
-            print(f"Gemini API warning (using fallback): {e}")
+    clean_name = streamer_name.lower().replace("@", "").strip()
+    
+    # Custom Creator Matching
+    if "mythpat" in clean_name:
+        title = random.choice([
+            "Mythpat's Craziest GTA 6 Moment LIVE! 😂🔥 #shorts",
+            "Mythpat Was NOT Ready For This in GTA 6! 💀 #shorts",
+            "Mythpat 5-Star Police Chase in Vice City! 🚓😂 #shorts"
+        ])
+        tags = CREATOR_TAGS["mythpat"]
+        desc = (
+            f"Mythpat funny moments and crazy gameplay in GTA 6 Vice City! 🎮🔥\n\n"
+            f"🔔 Subscribe to GTA 6 VICE HUB for daily viral clips, stream highlights & GTA 6 edits!\n\n"
+            f"{tags} #gta6gameplay #ytshorts"
+        )
+    elif "carry" in clean_name:
+        title = random.choice([
+            "CarryMinati's Wildest Reaction in GTA 6! 💀🔥 #shorts",
+            "CarryisLive GTA 6 Moments You Missed! 😂🎮 #shorts",
+            "CarryMinati Police Chase in GTA 6 Vice City! 🚓💥 #shorts"
+        ])
+        tags = CREATOR_TAGS["carryislive"]
+        desc = (
+            f"CarryisLive hilarious gameplay and wild reactions in GTA 6! 💥😂\n\n"
+            f"🔔 Subscribe to GTA 6 VICE HUB for daily top gaming moments!\n\n"
+            f"{tags} #gta6gameplay #ytshorts"
+        )
+    elif "speed" in clean_name:
+        title = random.choice([
+            "IShowSpeed's Craziest Rage in GTA 6! 💀⚡ #shorts",
+            "Speed Found THIS in GTA 6 Vice City?! 😱🔥 #shorts",
+            "When Speed Plays GTA 6 With 5 Stars! 🚨😂 #shorts"
+        ])
+        tags = CREATOR_TAGS["ishowspeed"]
+        desc = (
+            f"IShowSpeed wild and funny GTA 6 moments live on stream! 🏎️💨\n\n"
+            f"🔔 Subscribe to GTA 6 VICE HUB for daily viral gaming shorts!\n\n"
+            f"{tags} #gta6gameplay #ytshorts"
+        )
+    else:
+        title = random.choice(GENERIC_GTA6_TITLES)
+        tags = "#GTA6 #GTA6Gameplay #GTA6ViceCity #Gaming #Shorts #Viral #GamingShorts"
+        desc = (
+            f"Mindblowing GTA 6 next-gen physics and police chase moments in Vice City! 🤯🏎️💨\n\n"
+            f"🔔 Subscribe to GTA 6 VICE HUB for daily GTA 6 leaks, viral clips & easter eggs!\n\n"
+            f"{tags} #ytshorts"
+        )
 
-    # Fallback if no key or error
-    title = random.choice(FALLBACK_TITLES)
-    desc = f"Watch this insane GTA 6 live stream clip! Subscribe for daily viral moments."
-    return title, desc, FALLBACK_TAGS
+    return title, desc, tags
