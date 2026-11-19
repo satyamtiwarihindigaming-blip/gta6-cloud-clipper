@@ -1,28 +1,30 @@
-name: 24/7 Autonomous GTA 6 Cloud Clipper (ClipKaro & Deep Clip)
+name: 24/7 Autonomous GTA 6 & Techno Gamerz Cloud Clipper
 
 on:
   schedule:
-    # Runs automatically every 10 minutes in the cloud for ultra-frequent posting
-    - cron: '*/10 * * * *'
+    # 4 times daily at peak Indian gaming hours (IST):
+    # 04:30 UTC = 10:00 AM IST (Morning boost)
+    # 08:30 UTC = 02:00 PM IST (Afternoon peak)
+    # 12:30 UTC = 06:00 PM IST (Evening peak)
+    # 16:30 UTC = 10:00 PM IST (Night prime time)
+    - cron: '30 4,8,12,16 * * *'
   workflow_dispatch:
     inputs:
-      stream_url:
-        description: 'Direct Stream or Video URL to Clip'
+      custom_url:
+        description: 'Optional: Specific Video or Stream URL to Clip'
         required: false
         default: ''
-      mode:
-        description: 'Clipping Mode (deep / instant / auto)'
-        required: false
-        default: 'deep'
 
 jobs:
-  run-clipper:
+  run-autonomous-clipper:
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -30,12 +32,12 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
 
-      - name: Set up Node.js (for 1080p HD Stream Extraction)
+      - name: Set up Node.js (for yt-dlp 1080p stream extraction)
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Install FFmpeg (with libass)
+      - name: Install FFmpeg with Libass
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg libass-dev
@@ -43,28 +45,25 @@ jobs:
       - name: Install Python Dependencies
         run: |
           pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install yt-dlp requests python-dotenv
 
-      - name: Run ClipKaro Deep Clip Engine (Zero Blur 1080p HD)
+      - name: Run Autonomous Cloud Clipper Engine
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          SOCIAL_WEBHOOK_URL: ${{ secrets.SOCIAL_WEBHOOK_URL }}
+          BUFFER_TOKEN: ${{ secrets.BUFFER_TOKEN }}
           YOUTUBE_TOKEN_JSON: ${{ secrets.YOUTUBE_TOKEN_JSON }}
-          TARGET_STREAMERS: ${{ secrets.TARGET_STREAMERS }}
-          INPUT_STREAM_URL: ${{ github.event.inputs.stream_url }}
-          MODE: ${{ github.event.inputs.mode }}
-          CLIP_DURATION: "45"
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CUSTOM_URL: ${{ github.event.inputs.custom_url }}
         run: |
-          if [ -n "$INPUT_STREAM_URL" ]; then
-            echo "Running ClipKaro on Direct Stream URL: $INPUT_STREAM_URL"
-            python deepclip_stream.py --url "$INPUT_STREAM_URL" --layout "vertical-blur"
-          else
-            echo "Running 24/7 autonomous Indian & global streamer clipping"
-            python main.py
-          fi
+          python main.py
+
+      - name: Commit Updated Clip History
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add history.json
+          git commit -m "Auto: Update clipped moments history [skip ci]" || echo "No changes to commit"
+          git push origin main || echo "Git push skipped"
 
       - name: Save Generated Shorts as Cloud Artifact
         uses: actions/upload-artifact@v4

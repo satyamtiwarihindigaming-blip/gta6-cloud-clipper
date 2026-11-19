@@ -1,104 +1,91 @@
-import subprocess
 import os
-import random
+import subprocess
+from src.word_captions import generate_word_by_word_ass
 
-def generate_viral_captions_ass(ass_path: str, duration: int = 45):
+def get_creator_crops(creator_name: str) -> tuple[str, str]:
+    c_lower = creator_name.lower()
+    if "techno" in c_lower or "ujjwalgamer" in c_lower or "technogamerz" in c_lower:
+        # Techno Gamerz verified HD crops
+        top_crop = "crop=300:266:1565:80,scale=1080:960:flags=lanczos,unsharp=5:5:1.0:5:5:0.0"
+        bot_crop = "crop=1205:1070:350:0,scale=1080:960:flags=lanczos"
+    elif "carry" in c_lower:
+        # CarryisLive verified HD crops
+        top_crop = "crop=330:300:1580:750,scale=1080:960:flags=lanczos,unsharp=5:5:1.0:5:5:0.0"
+        bot_crop = "crop=1280:720:0:0,scale=1080:960:flags=lanczos"
+    elif "insaan" in c_lower or "triggered" in c_lower:
+        # Triggered Insaan / Live Insaan crops
+        top_crop = "crop=400:350:1500:700,scale=1080:960:flags=lanczos,unsharp=5:5:1.0:5:5:0.0"
+        bot_crop = "crop=1280:720:0:0,scale=1080:960:flags=lanczos"
+    else:
+        # Universal clean gaming split
+        top_crop = "crop=in_w*0.45:in_h*0.5:in_w*0.55:0,scale=1080:960:flags=lanczos,unsharp=5:5:1.0:5:5:0.0"
+        bot_crop = "crop=in_w*0.8:in_h*0.8:in_w*0.1:in_h*0.1,scale=1080:960:flags=lanczos"
+
+    return top_crop, bot_crop
+
+def convert_to_vertical_short(
+    input_path: str,
+    output_path: str,
+    creator_name: str = "Techno Gamerz",
+    word_list: list = None,
+    duration: float = 48.0
+) -> bool:
     """
-    Generates dynamic, word-by-word bouncing ASS subtitles with neon color highlights.
-    Placed strictly in the lower third (MarginV: 240) over the gameplay, leaving the middle clean.
-    """
-    ass_header = """[Script Info]
-ScriptType: v4.00+
-PlayResX: 1080
-PlayResY: 1920
-ScaledBorderAndShadow: yes
-
-[V4+ Styles]
-Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: PopYellow,Impact,74,&H0000FFFF,&H00FFFFFF,&H00000000,&H90000000,-1,0,0,0,105,105,2,0,1,7,4,2,40,40,240,1
-Style: PopCyan,Impact,74,&H00FFFF00,&H00FFFFFF,&H00000000,&H90000000,-1,0,0,0,105,105,2,0,1,7,4,2,40,40,240,1
-Style: PopGreen,Impact,76,&H002BF750,&H00FFFFFF,&H00000000,&H90000000,-1,0,0,0,110,110,2,0,1,8,4,2,40,40,240,1
-Style: PopRed,Impact,78,&H000000FF,&H00FFFFFF,&H00000000,&H90000000,-1,0,0,0,110,110,2,0,1,7,4,2,40,40,240,1
-Style: PopWhite,Impact,70,&H00FFFFFF,&H0000FFFF,&H00000000,&H90000000,-1,0,0,0,100,100,2,0,1,6,3,2,40,40,240,1
-
-[Events]
-Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
-"""
-    bursts = [
-        ("PopYellow", "{\\fscx115\\fscy115}BHAI WAIT! 😱{\\r}"),
-        ("PopWhite", "LOOK AT THIS CLUTCH!!"),
-        ("PopGreen", "{\\fscx120\\fscy120}YE KYA HO RAHA HAI?! 🤯{\\r}"),
-        ("PopCyan", "{\\fscx115\\fscy115}NEXT LEVEL STUNT! 🏎️{\\r}"),
-        ("PopRed", "OH BHAI MAARO MUJHE!! 💀"),
-        ("PopGreen", "{\\fscx120\\fscy120}PRO GAMER MOMENT! 🔥{\\r}"),
-        ("PopYellow", "{\\fscx125\\fscy125}NO WAY NO WAY! 😂{\\r}"),
-        ("PopWhite", "BALANCE BANAKE RAKH! 💥"),
-        ("PopGreen", "{\\fscx120\\fscy120}BAL BAL BACHE AAJ! 🚨{\\r}"),
-        ("PopYellow", "RECORD TOD DIYA BHAI! 🏆"),
-        ("PopCyan", "{\\fscx115\\fscy115}OP GAMEPLAY IN CHAT! 🎮{\\r}"),
-        ("PopWhite", "UNREAL DRIVING SKILLS! ⚡"),
-        ("PopRed", "{\\fscx130\\fscy130}SUBSCRIBE FOR DAILY LIVE! 🔔❤️{\\r}")
-    ]
-    
-    events = []
-    t = 0.5
-    for style, text in bursts:
-        if t >= duration - 1:
-            break
-        dt = 1.8
-        start_str = f"0:{int(t//60):02d}:{t%60:05.2f}"
-        end_str = f"0:{int((t+dt)//60):02d}:{(t+dt)%60:05.2f}"
-        events.append(f"Dialogue: 0,{start_str},{end_str},{style},,0,0,0,,{text}\n")
-        t += dt + 0.1
-        
-    with open(ass_path, "w", encoding="utf-8") as f:
-        f.write(ass_header + "".join(events))
-
-def convert_to_vertical_short(input_path: str, output_path: str, creator_name: str = "Streamer") -> bool:
-    """
-    Transforms footage into high-retention 9:16 Vertical Short with:
-    - Top: Streamer Facecam / Action closeup (1080x960) with unsharp filter (ZERO BLUR)
-    - Bottom: Centered Gameplay (1080x960) with unsharp filter
-    - Middle: CLEAN SPLIT - ZERO text in the middle!
-    - Captions: Dynamic Bouncing ASS in Lower Third (MarginV: 240)
-    - Loudness normalized audio (-14 LUFS)
+    Renders 1080x1920 (9:16 Vertical HD) 60 FPS Short/Reel with:
+    - Top: Streamer Facecam (1080x960, Lanczos + Unsharp, ZERO blur)
+    - Bottom: Gameplay (1080x960)
+    - Middle: 100% CLEAN SPLIT (Zero text/badges)
+    - Captions: Word-by-word dynamic popping (only when speaking, zero emojis)
     """
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     temp_dir = os.path.dirname(output_path)
-    
-    ass_path = os.path.join(temp_dir, "cloud_captions.ass")
-    generate_viral_captions_ass(ass_path, duration=45)
-    
-    ass_escaped = ass_path.replace("\\", "/").replace(":", "\\:")
 
-    # Top facecam with lanczos scale and unsharp filter for crystal clear sharpness (NO BLUR)
-    filter_complex = (
-        "[0:v]crop=in_w*0.35:in_h*0.45:0:in_h*0.55,scale=1080:960:flags=lanczos,unsharp=5:5:1.0:5:5:0.0[top];"
-        "[0:v]crop=in_w*0.65:in_h*0.8:in_w*0.35:0,scale=1080:960:flags=lanczos,unsharp=5:5:0.8:5:5:0.0[bot];"
-        "[top][bot]vstack[vstacked];"
-        f"[vstacked]ass='{ass_escaped}'[v];"
-        "[0:a]loudnorm=I=-14:TP=-1.5:LRA=11[a]"
-    )
-    
+    ass_path = os.path.join(temp_dir, "speech_word_by_word.ass")
+    generate_word_by_word_ass(ass_path, word_list or [], total_duration=duration)
+
+    ass_escaped = ass_path.replace("\\", "/").replace(":", "\\:")
+    top_crop, bot_crop = get_creator_crops(creator_name)
+
+    if os.path.exists(ass_path) and os.path.getsize(ass_path) > 300:
+        filter_complex = (
+            f"[0:v]{top_crop}[top];"
+            f"[0:v]{bot_crop}[bot];"
+            f"[top][bot]vstack[vstacked];"
+            f"[vstacked]ass='{ass_escaped}'[vout];"
+            f"[0:a]loudnorm=I=-14:LRA=7:tp=-1[aout]"
+        )
+    else:
+        filter_complex = (
+            f"[0:v]{top_crop}[top];"
+            f"[0:v]{bot_crop}[bot];"
+            f"[top][bot]vstack[vout];"
+            f"[0:a]loudnorm=I=-14:LRA=7:tp=-1[aout]"
+        )
+
     cmd = [
         "ffmpeg", "-y",
+        "-avoid_negative_ts", "make_zero",
         "-i", input_path,
         "-filter_complex", filter_complex,
-        "-map", "[v]",
-        "-map", "[a]",
+        "-map", "[vout]",
+        "-map", "[aout]",
         "-c:v", "libx264",
         "-preset", "veryfast",
         "-crf", "22",
-        "-r", "30",
+        "-r", "60",
+        "-pix_fmt", "yuv420p",
         "-c:a", "aac",
-        "-b:a", "128k",
-        "-t", "45",
+        "-b:a", "160k",
+        "-t", str(duration),
         output_path
     ]
-    
-    print(f"Running FFmpeg HD split-screen render (Zero Blur, Clean middle): {' '.join(cmd)}")
+
+    print(f"[FFmpeg] Rendering 1080x1920 60FPS Short for {creator_name}...")
     res = subprocess.run(cmd, capture_output=True, text=True)
-    if res.returncode != 0:
-        print(f"FFmpeg render error: {res.stderr[-500:]}")
+    if res.returncode == 0 and os.path.exists(output_path):
+        size_mb = os.path.getsize(output_path) / (1024 * 1024)
+        print(f"[FFmpeg] SUCCESS: Rendered {output_path} ({size_mb:.2f} MB, 60fps HD)")
+        return True
+    else:
+        print(f"[FFmpeg] Error: {res.stderr[-500:]}")
         return False
-    return True

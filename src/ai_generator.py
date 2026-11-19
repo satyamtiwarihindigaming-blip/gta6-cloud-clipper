@@ -1,73 +1,75 @@
 import random
-import os
 
-CREATOR_TAGS = {
-    "mythpat": "#mythpat #mythpatlive #gta6 #gaming #shorts #viral #funny",
-    "carryislive": "#carryislive #carryminati #gta6 #gaming #shorts #viral #funny",
-    "ishowspeed": "#ishowspeed #speed #speedlive #gta6 #gaming #shorts #viral #crazy",
-    "kaicenat": "#kaicenat #kai #amp #gta6 #gaming #shorts #viral",
-    "xqc": "#xqc #xqclive #gta6 #gaming #shorts #viral"
-}
-
-GENERIC_GTA6_TITLES = [
-    "THIS GTA 6 MOMENT IS ABSOLUTELY INSANE! 💀🔥 #shorts",
-    "BRO WAS NOT READY FOR THIS IN GTA 6 😂🚓 #shorts",
-    "THE REALISM IN GTA 6 LOOKS UNREAL! 🤯🏎️ #shorts",
-    "5-STAR WANTED IN GTA 6 VICE CITY! 🚨💥 #shorts",
-    "CRAZIEST POLICE CHASE IN GTA 6 YET! 🏎️💨 #shorts",
-    "WHEN SPEED PLAYS GTA 6 BE LIKE... 💀😂 #shorts"
+TECHNO_YT_TITLES = [
+    "TECHNO GAMERZ FIRST DAY IN VICE CITY! 🚨🔥 Police Heist Escape #shorts #technogamerz #gta6",
+    "TECHNO GAMERZ INSANE 5-STAR POLICE CHASE IN GTA 6! 🏎️💨 #shorts #technogamerz",
+    "TECHNO GAMERZ CAN'T BELIEVE THIS GTA 6 DETAIL! 🤯🎮 #shorts #techno",
+    "LUCIA & UJJWAL CRAZIEST ESCAPE IN GTA 6! 💀🔥 #shorts #gta6"
 ]
 
-def generate_viral_metadata(streamer_name: str = "Streamer") -> tuple[str, str, str]:
-    """
-    Returns (Title, Description, Tags) tailored to the creator and GTA 6.
-    """
-    clean_name = streamer_name.lower().replace("@", "").strip()
-    
-    # Custom Creator Matching
-    if "mythpat" in clean_name:
-        title = random.choice([
-            "Mythpat's Craziest GTA 6 Moment LIVE! 😂🔥 #shorts",
-            "Mythpat Was NOT Ready For This in GTA 6! 💀 #shorts",
-            "Mythpat 5-Star Police Chase in Vice City! 🚓😂 #shorts"
-        ])
-        tags = CREATOR_TAGS["mythpat"]
-        desc = (
-            f"Mythpat funny moments and crazy gameplay in GTA 6 Vice City! 🎮🔥\n\n"
-            f"🔔 Subscribe to GTA 6 VICE HUB for daily viral clips, stream highlights & GTA 6 edits!\n\n"
-            f"{tags} #gta6gameplay #ytshorts"
+CARRY_YT_TITLES = [
+    "CARRYMINATI CRAZIEST GTA RAMP STUNT! 💀🚗 (BAL BAL BACHE) #shorts #carryislive #gta5",
+    "CARRYMINATI VS VICE CITY POLICE! 🚨😂 (HILIOUS REACTION) #shorts #carryminati",
+    "WHEN CARRY GETS 5-STAR WANTED IN GTA! 🚓💥 #shorts #carryislive"
+]
+
+INSAAN_YT_TITLES = [
+    "TRIGGERED INSAAN UNREAL GTA 6 REACTION! 😂🔥 #shorts #liveinsaan #gta6",
+    "LIVE INSAAN CANNOT STOP LAUGHING IN GTA 6! 💀🎮 #shorts #triggeredinsaan"
+]
+
+def generate_dual_metadata(creator_name: str = "Techno Gamerz") -> dict:
+    c_lower = creator_name.lower()
+
+    if "techno" in c_lower or "ujjwalgamer" in c_lower:
+        yt_title = random.choice(TECHNO_YT_TITLES)
+        yt_desc = (
+            "Techno Gamerz gets caught in an insane GTA 6 Vice City police chase! 🚨🎮\n\n"
+            "Watch Ujjwal and Lucia pull off the craziest rooftop heist escape! Like & SUBSCRIBE to GTA 6 VICE HUB for daily 60FPS Indian gaming stream moments!\n\n"
+            "#shorts #technogamerz #gta6 #gaming #ytshorts #techno #ujjwalgamer #vicecity #gta #viral"
         )
-    elif "carry" in clean_name:
-        title = random.choice([
-            "CarryMinati's Wildest Reaction in GTA 6! 💀🔥 #shorts",
-            "CarryisLive GTA 6 Moments You Missed! 😂🎮 #shorts",
-            "CarryMinati Police Chase in GTA 6 Vice City! 🚓💥 #shorts"
-        ])
-        tags = CREATOR_TAGS["carryislive"]
-        desc = (
-            f"CarryisLive hilarious gameplay and wild reactions in GTA 6! 💥😂\n\n"
-            f"🔔 Subscribe to GTA 6 VICE HUB for daily top gaming moments!\n\n"
-            f"{tags} #gta6gameplay #ytshorts"
+        yt_tags = ["shorts", "technogamerz", "gta6", "gaming", "ytshorts", "techno", "ujjwalgamer", "vicecity", "viral"]
+
+        ig_caption = (
+            "TECHNO GAMERZ IN GTA 6! 🚨 Vice City Rooftop Alarm & Police Escape! 🔥\n\n"
+            "When the alarm goes off and Vice City cops pull up... Lucia and Ujjwal escape! 💀🎮\n\n"
+            "Watch full 60FPS Shorts on YouTube: @gta6vicehubind 🌴\n\n"
+            "#gta6 #technogamerz #gaming #reels #gta #vicecity #gta6gameplay #indianstreamer #viralreels #explorepage #indiangaming"
         )
-    elif "speed" in clean_name:
-        title = random.choice([
-            "IShowSpeed's Craziest Rage in GTA 6! 💀⚡ #shorts",
-            "Speed Found THIS in GTA 6 Vice City?! 😱🔥 #shorts",
-            "When Speed Plays GTA 6 With 5 Stars! 🚨😂 #shorts"
-        ])
-        tags = CREATOR_TAGS["ishowspeed"]
-        desc = (
-            f"IShowSpeed wild and funny GTA 6 moments live on stream! 🏎️💨\n\n"
-            f"🔔 Subscribe to GTA 6 VICE HUB for daily viral gaming shorts!\n\n"
-            f"{tags} #gta6gameplay #ytshorts"
+    elif "carry" in c_lower:
+        yt_title = random.choice(CARRY_YT_TITLES)
+        yt_desc = (
+            "CarryisLive attempts the wildest stunts and police chases in GTA! 😂🔥\n\n"
+            "Like & SUBSCRIBE to GTA 6 VICE HUB for daily high-energy stream highlights!\n\n"
+            "#shorts #carryminati #carryislive #gta5 #gta #gaming #viral #funny #ytshorts"
+        )
+        yt_tags = ["shorts", "carryminati", "carryislive", "gta5", "gta", "gaming", "viral", "funny", "ytshorts"]
+
+        ig_caption = (
+            "CARRYMINATI CRAZIEST GTA ESCAPE! 💀🔥 Bal Bal Bache!\n\n"
+            "When CarryisLive takes on the cops in GTA... pure comedy! 😂🎮\n\n"
+            "Follow @grow10z for daily Indian gaming clips! 🌴\n\n"
+            "#carryminati #carryislive #gta #gta6 #gamingreels #viralreels #indianstreamer #explorepage #indiangaming"
         )
     else:
-        title = random.choice(GENERIC_GTA6_TITLES)
-        tags = "#GTA6 #GTA6Gameplay #GTA6ViceCity #Gaming #Shorts #Viral #GamingShorts"
-        desc = (
-            f"Mindblowing GTA 6 next-gen physics and police chase moments in Vice City! 🤯🏎️💨\n\n"
-            f"🔔 Subscribe to GTA 6 VICE HUB for daily GTA 6 leaks, viral clips & easter eggs!\n\n"
-            f"{tags} #ytshorts"
+        yt_title = random.choice(INSAAN_YT_TITLES)
+        yt_desc = (
+            "Triggered Insaan funniest gaming reaction in GTA! 🎮😂\n\n"
+            "Like & SUBSCRIBE to GTA 6 VICE HUB for daily top Indian streamer moments!\n\n"
+            "#shorts #liveinsaan #triggeredinsaan #gta6 #gaming #ytshorts #viral"
+        )
+        yt_tags = ["shorts", "liveinsaan", "triggeredinsaan", "gta6", "gaming", "ytshorts"]
+
+        ig_caption = (
+            "TRIGGERED INSAAN WILD GTA REACTION! 😂🔥\n\n"
+            "When Live Insaan plays GTA... non-stop entertainment! 💀🎮\n\n"
+            "Follow @grow10z for daily viral gaming reels! 🌴\n\n"
+            "#liveinsaan #triggeredinsaan #gta6 #gamingreels #viralreels #indianstreamer #explorepage"
         )
 
-    return title, desc, tags
+    return {
+        "yt_title": yt_title,
+        "yt_desc": yt_desc,
+        "yt_tags": yt_tags,
+        "ig_caption": ig_caption
+    }

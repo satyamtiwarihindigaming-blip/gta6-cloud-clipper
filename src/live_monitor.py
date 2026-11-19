@@ -1,58 +1,141 @@
 import subprocess
 import json
+import os
 import random
-from src.config import GTA6_SEARCH_QUERIES
+import re
 
-def is_stream_live(streamer_url: str) -> bool:
-    """
-    Checks if a Twitch or YouTube live stream is actively online using streamlink JSON probe.
-    """
-    cmd = ["streamlink", "--json", streamer_url]
-    try:
-        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, timeout=15)
-        if result.returncode == 0 and result.stdout:
-            data = json.loads(result.stdout)
-            streams = data.get("streams", {})
-            return len(streams) > 0
-    except Exception as e:
-        print(f"Error checking stream status for {streamer_url}: {e}")
-    return False
+HISTORY_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "history.json")
 
-def get_trending_gta6_video() -> tuple[str, str]:
+def load_history() -> dict:
+    if os.path.exists(HISTORY_FILE):
+        try:
+            with open(HISTORY_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {"posted_clips": [], "processed_moments": []}
+
+def save_history(history: dict):
+    with open(HISTORY_FILE, "w", encoding="utf-8") as f:
+        json.dump(history, f, indent=2, ensure_ascii=False)
+
+def find_target_video() -> tuple[str, str, str]:
     """
-    Finds the latest trending GTA 6 / Streamer video on YouTube as a guaranteed fallback.
-    Returns (video_url, title).
+    Finds the latest Techno Gamerz GTA 6 video/stream or top Indian creator video.
+    Returns (video_id, video_url, creator_name).
     """
-    query = random.choice(GTA6_SEARCH_QUERIES)
-    print(f"🔍 Searching YouTube for trending clip content: '{query}'...")
-    cmd = ["yt-dlp", f"ytsearch1:{query}", "--get-id", "--get-title"]
-    try:
-        out = subprocess.check_output(cmd, text=True, timeout=30).strip().split("\n")
-        if len(out) >= 2:
-            title = out[0].strip()
-            vid_id = out[1].strip()
-            url = f"https://www.youtube.com/watch?v={vid_id}"
-            print(f"🎯 Found trending video: {title} ({url})")
-            return url, title
-    except Exception as e:
-        print(f"Search fallback error: {e}")
+    search_queries = [
+        ("Techno Gamerz GTA 6 Gameplay", "Techno Gamerz"),
+        ("Techno Gamerz Vice City Police Chase", "Techno Gamerz"),
+        ("CarryisLive GTA 5 Stunt Race", "CarryisLive"),
+        ("Live Insaan GTA 5 Funny Moments", "Live Insaan")
+    ]
+
+    for query, creator in search_queries:
+        print(f"[Scanner] Searching YouTube for: '{query}'...")
+        cmd = ["yt-dlp", f"ytsearch5:{query}", "--get-id", "--get-title"]
+        try:
+            res = subprocess.run(cmd, capture_output=True, text=True, timeout=35)
+            lines = [l.strip() for l in res.stdout.strip().split("\n") if l.strip()]
+            # yt-dlp outputs alternate title and id
+            for i in range(0, len(lines) - 1, 2):
+                title = lines[i]
+                vid_id = lines[i + 1]
+                if len(vid_id) == 11:
+                    print(f"[Scanner] Found Candidate: {title} ({vid_id}) by {creator}")
+                    return vid_id, f"https://www.youtube.com/watch?v={vid_id}", creator
+        except Exception as e:
+            print(f"[Scanner] Query '{query}' failed: {e}")
+
+    # Fallback to verified Techno Gamerz GTA 6 video
+    return "169ZzvPxvvM", "https://www.youtube.com/watch?v=169ZzvPxvvM", "Techno Gamerz"
+
+def download_subtitles_and_find_viral_moment(video_id: str, temp_dir: str) -> tuple[float, float, str, list]:
+    """
+    Downloads native auto-generated Hindi subtitles (hi-orig) and detects
+    a high-energy 45-55 second moment that hasn't been clipped yet.
+    Returns (start_sec, end_sec, vtt_path, word_list).
+    """
+    os.makedirs(temp_dir, exist_ok=True)
+    vtt_template = os.path.join(temp_dir, f"{video_id}.%(ext)s")
     
-    # Ultimate safe fallback
-    return "https://www.youtube.com/watch?v=3PiR0G3rVw8", "GTA 6 Insane Moments"
+    print(f"[VTT] Downloading auto-subs for {video_id}...")
+    cmd = [
+        "yt-dlp",
+        "--skip-download",
+        "--write-auto-subs",
+        "--sub-lang", "hi-orig,hi,en",
+        "--sub-format", "vtt",
+        "-o", vtt_template,
+        f"https://www.youtube.com/watch?v={video_id}"
+    ]
+    subprocess.run(cmd, capture_output=True, text=True, timeout=30)
 
-def find_active_streamer(streamers: list) -> tuple[str, str]:
-    """
-    Returns (stream_url, creator_name).
-    If a target streamer is LIVE, returns their live stream.
-    If none are live, returns the latest trending GTA 6 video.
-    """
-    for streamer in streamers:
-        print(f"Checking if {streamer} is LIVE...")
-        if is_stream_live(streamer):
-            name = streamer.rstrip("/").split("/")[-1].replace("@", "")
-            print(f"🎯 FOUND LIVE STREAMER: {name} ({streamer})")
-            return streamer, name
-            
-    print("ℹ️ Target streamers not live right now. Activating GTA 6 Trending Video Pipeline...")
-    url, title = get_trending_gta6_video()
-    return url, "GTA 6 Gameplay"
+    # Find the downloaded vtt file
+    vtt_file = None
+    for f in os.listdir(temp_dir):
+        if f.startswith(video_id) and f.endswith(".vtt"):
+            vtt_file = os.path.join(temp_dir, f)
+            break
+
+    history = load_history()
+    used_moments = history.get("processed_moments", [])
+
+    # Default fallback moment if subs not found
+    default_start = 650.0  # 10:50
+    default_end = 698.0    # 11:38
+
+    if not vtt_file or not os.path.exists(vtt_file):
+        print("[VTT] No subtitle track found. Using high-action fallback window.")
+        return default_start, default_end, None, []
+
+    # Parse all speech segments from VTT to find peak speaking intensity
+    from src.word_captions import to_sec
+    with open(vtt_file, "r", encoding="utf-8", errors="ignore") as f:
+        vtt_content = f.read()
+
+    # Extract all timestamped words
+    matches = list(re.finditer(r'<(\d{2}:\d{2}:\d{2}\.\d{3})><c>\s*([^<]+)</c>', vtt_content))
+    if len(matches) < 20:
+        return default_start, default_end, vtt_file, []
+
+    # Score 48-second sliding windows by words per second (high speech intensity = excitement)
+    all_words = []
+    for m in matches:
+        sec = to_sec(m.group(1))
+        w = m.group(2).strip()
+        if w:
+            all_words.append((sec, w))
+
+    window_size = 48.0
+    best_start = default_start
+    best_score = -1
+
+    # Check candidates starting from 2 minutes in up to total duration - 1 min
+    min_time = 120.0
+    max_time = all_words[-1][0] - window_size if all_words else 800.0
+
+    curr = min_time
+    while curr < max_time:
+        # Check if this slice overlaps with any used moment
+        overlap = any(abs(curr - m_start) < 40 for m_start in used_moments if m_start)
+        if not overlap:
+            words_in_window = [w for s, w in all_words if curr <= s <= curr + window_size]
+            score = len(words_in_window)
+            if score > best_score:
+                best_score = score
+                best_start = curr
+        curr += 15.0
+
+    best_end = best_start + window_size
+    print(f"[VTT] Selected Best Viral Speech Window: {best_start:.1f}s to {best_end:.1f}s ({best_score} spoken words)")
+
+    # Extract word list for the chosen window
+    chosen_words = []
+    for sec, w in all_words:
+        if best_start <= sec <= best_end:
+            clean_w = re.sub(r'[^\w\s\u0900-\u097F!?.,\'-]', '', w).strip().upper()
+            if clean_w:
+                chosen_words.append((sec - best_start, clean_w))
+
+    return best_start, best_end, vtt_file, chosen_words
