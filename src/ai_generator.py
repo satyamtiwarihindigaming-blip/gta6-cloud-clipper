@@ -69,7 +69,16 @@ def generate_dual_metadata(
     end_min = int(end_sec // 60)
     end_s = int(end_sec % 60)
     
-    words_summary = " ".join([w for _, w in context_words[:35]]) if context_words else "High intensity gameplay chase and escape"
+    if context_words:
+        formatted_words = []
+        for item in context_words[:35]:
+            if isinstance(item, (tuple, list)) and len(item) >= 2:
+                formatted_words.append(str(item[1]))
+            else:
+                formatted_words.append(str(item))
+        words_summary = " ".join(formatted_words)
+    else:
+        words_summary = "High intensity gameplay chase and escape"
     
     prompt = f"""You are an elite viral strategist for YouTube Shorts and Instagram Reels (Indian Gaming Niche).
 Analyze this specific gameplay moment:
