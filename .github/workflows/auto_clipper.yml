@@ -63,11 +63,13 @@ jobs:
 
       - name: Configure Global yt-dlp Settings & Plugins
         run: |
-          mkdir -p ~/.config/yt-dlp/plugins/bgutil
+          mkdir -p ~/.config/yt-dlp/plugins
           SITE_DIR=$(python -c "import site; print(site.getsitepackages()[0])")
           if [ -d "$SITE_DIR/yt_dlp_plugins" ]; then
-            cp -r "$SITE_DIR/yt_dlp_plugins" ~/.config/yt-dlp/plugins/bgutil/
-            echo "Installed yt_dlp_plugins to ~/.config/yt-dlp/plugins/bgutil/"
+            cp -r "$SITE_DIR/yt_dlp_plugins" ~/.config/yt-dlp/plugins/
+            sudo mkdir -p /etc/yt-dlp/plugins
+            sudo cp -r "$SITE_DIR/yt_dlp_plugins" /etc/yt-dlp/plugins/
+            echo "Installed yt_dlp_plugins to ~/.config/yt-dlp/plugins/"
           fi
           
           cat << 'EOF' > ~/.config/yt-dlp/config
@@ -76,7 +78,7 @@ jobs:
           --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
           EOF
           sudo cp ~/.config/yt-dlp/config /etc/yt-dlp.conf
-          yt-dlp -v || true
+          python -m yt_dlp -v || true
 
       - name: Run Autonomous Cloud Clipper Engine
         env:
