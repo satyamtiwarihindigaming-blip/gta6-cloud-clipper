@@ -52,9 +52,15 @@ def run():
         print("❌ Video rendering failed. Exiting.")
         sys.exit(1)
 
-    # Step 5: Generate Dual Platform Metadata
-    print("\n[Step 5] Generating SEO/SMO Metadata for YouTube & Instagram...")
-    metadata = generate_dual_metadata(creator_name)
+    # Step 5: Generate Dual Platform Metadata with Google AI Studio (Gemini)
+    print("\n[Step 5] Generating Dynamic Viral Metadata with Google AI Studio (Gemini)...")
+    metadata = generate_dual_metadata(
+        creator_name=creator_name,
+        video_title=f"{creator_name} GTA Gameplay ({video_id})",
+        start_sec=start_sec,
+        duration=duration,
+        context_words=word_list
+    )
     print(f"YouTube Title: {metadata['yt_title']}")
     print(f"Instagram Caption:\n{metadata['ig_caption']}")
 

@@ -1,71 +1,139 @@
+import os
+import re
+import json
 import random
+import urllib.request
 
-TECHNO_YT_TITLES = [
-    "TECHNO GAMERZ FIRST DAY IN VICE CITY! 🚨🔥 Police Heist Escape #shorts #technogamerz #gta6",
-    "TECHNO GAMERZ INSANE 5-STAR POLICE CHASE IN GTA 6! 🏎️💨 #shorts #technogamerz",
-    "TECHNO GAMERZ CAN'T BELIEVE THIS GTA 6 DETAIL! 🤯🎮 #shorts #techno",
-    "LUCIA & UJJWAL CRAZIEST ESCAPE IN GTA 6! 💀🔥 #shorts #gta6"
-]
+def get_gemini_api_key() -> str:
+    """Retrieves Google AI Studio Gemini API key from env or local config."""
+    key = os.getenv("GEMINI_API_KEY")
+    if key and len(key.strip()) > 20:
+        return key.strip()
+    try:
+        import sys
+        sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+        import config
+        key = getattr(config, "GEMINI_API_KEY", "")
+        if key and len(key.strip()) > 20:
+            return key.strip()
+    except Exception:
+        pass
+    return ""
 
-CARRY_YT_TITLES = [
-    "CARRYMINATI CRAZIEST GTA RAMP STUNT! 💀🚗 (BAL BAL BACHE) #shorts #carryislive #gta5",
-    "CARRYMINATI VS VICE CITY POLICE! 🚨😂 (HILIOUS REACTION) #shorts #carryminati",
-    "WHEN CARRY GETS 5-STAR WANTED IN GTA! 🚓💥 #shorts #carryislive"
-]
+def call_gemini_api(prompt: str) -> str:
+    """Calls Google AI Studio Gemini REST API (gemini-2.5-flash with gemini-1.5-flash fallback)."""
+    api_key = get_gemini_api_key()
+    if not api_key:
+        print("[AI Generator] Note: GEMINI_API_KEY not configured. Using dynamic algorithmic fallback.")
+        return ""
 
-INSAAN_YT_TITLES = [
-    "TRIGGERED INSAAN UNREAL GTA 6 REACTION! 😂🔥 #shorts #liveinsaan #gta6",
-    "LIVE INSAAN CANNOT STOP LAUGHING IN GTA 6! 💀🎮 #shorts #triggeredinsaan"
-]
+    for model in ["gemini-2.5-flash", "gemini-1.5-flash"]:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+        payload = {
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {
+                "temperature": 0.85,
+                "maxOutputTokens": 600
+            }
+        }
+        try:
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(payload).encode("utf-8"),
+                headers={"Content-Type": "application/json"}
+            )
+            with urllib.request.urlopen(req, timeout=20) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+                if text:
+                    return text
+        except Exception as e:
+            print(f"[AI Generator] Gemini model {model} attempt note: {e}")
 
-def generate_dual_metadata(creator_name: str = "Techno Gamerz") -> dict:
+    return ""
+
+def generate_dual_metadata(
+    creator_name: str = "Techno Gamerz",
+    video_title: str = "GTA 6 Gameplay",
+    start_sec: float = 0.0,
+    duration: float = 48.0,
+    context_words: list = None
+) -> dict:
+    """
+    Generates 100% dynamic, tailored viral metadata using Google AI Studio (Gemini).
+    Ensures every clip gets unique high-CTR titles, descriptions, and hashtags for YouTube Shorts & Instagram Reels.
+    """
+    start_min = int(start_sec // 60)
+    start_s = int(start_sec % 60)
+    end_sec = start_sec + duration
+    end_min = int(end_sec // 60)
+    end_s = int(end_sec % 60)
+    
+    words_summary = " ".join([w for _, w in context_words[:35]]) if context_words else "High intensity gameplay chase and escape"
+    
+    prompt = f"""You are an elite viral strategist for YouTube Shorts and Instagram Reels (Indian Gaming Niche).
+Analyze this specific gameplay moment:
+- Streamer / Creator: {creator_name}
+- Source Video: {video_title}
+- Timestamp: {start_min:02d}:{start_s:02d} to {end_min:02d}:{end_s:02d} ({duration:.0f}s clip)
+- Dialogue / Gameplay Context: {words_summary}
+
+Craft viral, high-CTR metadata tailored specifically to what happens in this clip so it blows up on the algorithm on BOTH platforms.
+
+RULES:
+1. YouTube Shorts Title:
+   - Max 75-85 characters.
+   - High curiosity hook + ALL CAPS punchy words + 2 relevant emojis + ends with #shorts.
+   - Never duplicate previous generic titles.
+   
+2. YouTube Description:
+   - 2-3 sentence high-energy summary of this exact moment.
+   - Call to action to like & subscribe.
+   - 8-10 trending gaming hashtags (#shorts #gta6 #technogamerz etc.).
+
+3. YouTube Tags:
+   - Array of 8-10 relevant search tags.
+
+4. Instagram Reels Caption:
+   - Line 1: Explosive hook line in ALL CAPS with emojis.
+   - Line 2-3: Engaging conversational Hinglish / English breakdown of the scene.
+   - Call to follow @grow10z for daily stream moments.
+   - 12-15 high-reach explore hashtags (#viralreels #gaming #gta6 #technogamerz #explorepage etc.).
+
+Output ONLY valid JSON without markdown fences:
+{{
+  "yt_title": "...",
+  "yt_desc": "...",
+  "yt_tags": ["..."],
+  "ig_caption": "..."
+}}"""
+
+    ai_raw = call_gemini_api(prompt)
+    if ai_raw:
+        clean_json = re.sub(r'```json\s*', '', ai_raw)
+        clean_json = re.sub(r'```\s*', '', clean_json).strip()
+        try:
+            parsed = json.loads(clean_json)
+            if "yt_title" in parsed and "ig_caption" in parsed:
+                print(f"[AI Generator] ✅ Google AI Studio (Gemini) generated dynamic viral metadata!")
+                print(f"[AI Generator] YouTube: {parsed['yt_title']}")
+                return parsed
+        except Exception as e:
+            print(f"[AI Generator] JSON parsing fallback: {e}")
+
+    # Dynamic fallback with unique timestamp identifiers
+    moment_tag = f"{start_min:02d}:{start_s:02d}"
     c_lower = creator_name.lower()
-
-    if "techno" in c_lower or "ujjwalgamer" in c_lower:
-        yt_title = random.choice(TECHNO_YT_TITLES)
-        yt_desc = (
-            "Techno Gamerz gets caught in an insane GTA 6 Vice City police chase! 🚨🎮\n\n"
-            "Watch Ujjwal and Lucia pull off the craziest rooftop heist escape! Like & SUBSCRIBE to GTA 6 VICE HUB for daily 60FPS Indian gaming stream moments!\n\n"
-            "#shorts #technogamerz #gta6 #gaming #ytshorts #techno #ujjwalgamer #vicecity #gta #viral"
-        )
-        yt_tags = ["shorts", "technogamerz", "gta6", "gaming", "ytshorts", "techno", "ujjwalgamer", "vicecity", "viral"]
-
-        ig_caption = (
-            "TECHNO GAMERZ IN GTA 6! 🚨 Vice City Rooftop Alarm & Police Escape! 🔥\n\n"
-            "When the alarm goes off and Vice City cops pull up... Lucia and Ujjwal escape! 💀🎮\n\n"
-            "Watch full 60FPS Shorts on YouTube: @gta6vicehubind 🌴\n\n"
-            "#gta6 #technogamerz #gaming #reels #gta #vicecity #gta6gameplay #indianstreamer #viralreels #explorepage #indiangaming"
-        )
-    elif "carry" in c_lower:
-        yt_title = random.choice(CARRY_YT_TITLES)
-        yt_desc = (
-            "CarryisLive attempts the wildest stunts and police chases in GTA! 😂🔥\n\n"
-            "Like & SUBSCRIBE to GTA 6 VICE HUB for daily high-energy stream highlights!\n\n"
-            "#shorts #carryminati #carryislive #gta5 #gta #gaming #viral #funny #ytshorts"
-        )
-        yt_tags = ["shorts", "carryminati", "carryislive", "gta5", "gta", "gaming", "viral", "funny", "ytshorts"]
-
-        ig_caption = (
-            "CARRYMINATI CRAZIEST GTA ESCAPE! 💀🔥 Bal Bal Bache!\n\n"
-            "When CarryisLive takes on the cops in GTA... pure comedy! 😂🎮\n\n"
-            "Follow @grow10z for daily Indian gaming clips! 🌴\n\n"
-            "#carryminati #carryislive #gta #gta6 #gamingreels #viralreels #indianstreamer #explorepage #indiangaming"
-        )
+    if "carry" in c_lower:
+        yt_title = f"CARRY CRAZIEST GTA ESCAPE AT {moment_tag}! 💀🔥 (BAL BAL BACHE) #shorts"
+        yt_desc = f"CarryisLive attempts the wildest stunts and police chases in GTA! Timestamp: {moment_tag}.\n\nLike & SUBSCRIBE for daily high-energy stream highlights!\n\n#shorts #carryminati #carryislive #gta5 #gta #gaming #viral #ytshorts"
+        yt_tags = ["shorts", "carryminati", "carryislive", "gta5", "gta", "gaming", "viral"]
+        ig_caption = f"CARRY CRAZIEST ESCAPE AT {moment_tag}! 💀🔥\n\nWhen CarryisLive takes on the cops in GTA... pure comedy! 😂🎮\n\nFollow @grow10z for daily clips!\n\n#carryminati #carryislive #gta #gamingreels #viralreels #explorepage"
     else:
-        yt_title = random.choice(INSAAN_YT_TITLES)
-        yt_desc = (
-            "Triggered Insaan funniest gaming reaction in GTA! 🎮😂\n\n"
-            "Like & SUBSCRIBE to GTA 6 VICE HUB for daily top Indian streamer moments!\n\n"
-            "#shorts #liveinsaan #triggeredinsaan #gta6 #gaming #ytshorts #viral"
-        )
-        yt_tags = ["shorts", "liveinsaan", "triggeredinsaan", "gta6", "gaming", "ytshorts"]
-
-        ig_caption = (
-            "TRIGGERED INSAAN WILD GTA REACTION! 😂🔥\n\n"
-            "When Live Insaan plays GTA... non-stop entertainment! 💀🎮\n\n"
-            "Follow @grow10z for daily viral gaming reels! 🌴\n\n"
-            "#liveinsaan #triggeredinsaan #gta6 #gamingreels #viralreels #indianstreamer #explorepage"
-        )
+        yt_title = f"{creator_name.upper()} INSANE GTA 6 CHASE AT {moment_tag}! 🏎️💨 #shorts"
+        yt_desc = f"{creator_name} gets caught in an insane Vice City chase at {moment_tag}! 🚨🎮\n\nWatch the full 60FPS action! Like & SUBSCRIBE for daily Indian gaming stream moments!\n\n#shorts #technogamerz #gta6 #gaming #ytshorts #vicecity #viral"
+        yt_tags = ["shorts", "technogamerz", "gta6", "gaming", "ytshorts", "vicecity", "viral"]
+        ig_caption = f"{creator_name.upper()} IN VICE CITY AT {moment_tag}! 🚨 INSANE ESCAPE! 🔥\n\nWhen the alarm goes off and cops pull up... epic escape! 💀🎮\n\nFollow @grow10z for daily stream moments! 🌴\n\n#gta6 #technogamerz #gaming #reels #vicecity #viralreels #explorepage"
 
     return {
         "yt_title": yt_title,
