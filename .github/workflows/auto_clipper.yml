@@ -73,8 +73,9 @@ jobs:
           fi
           
           cat << 'EOF' > ~/.config/yt-dlp/config
-          --js-runtimes deno,node
+          --js-runtimes deno node
           --extractor-args "youtubepot-bgutilhttp:base_url=http://127.0.0.1:4416"
+          --extractor-args "youtube:player_client=web,ios,mweb"
           --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
           EOF
           sudo cp ~/.config/yt-dlp/config /etc/yt-dlp.conf

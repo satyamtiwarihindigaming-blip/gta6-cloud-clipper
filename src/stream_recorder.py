@@ -4,8 +4,8 @@ import sys
 
 def record_slice_segment(stream_url: str, output_path: str, start_sec: float, duration: float = 48.0) -> bool:
     """
-    Downloads precision 1080p HD highlight slice using python -m yt_dlp with Node/Deno JS runtimes.
-    Loads the bgutil-ytdlp-pot-provider plugin from Python site-packages automatically.
+    Downloads precision 1080p HD highlight slice using python -m yt_dlp with Deno JS runtime.
+    Uses bgutil-ytdlp-pot-provider sidecar and multi-client fallback (web, ios, mweb).
     """
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     end_sec = start_sec + duration
@@ -18,11 +18,12 @@ def record_slice_segment(stream_url: str, output_path: str, start_sec: float, du
     section_str = f"*{start_m:02d}:{start_s:02d}-{end_m:02d}:{end_s:02d}"
     print(f"[Downloader] Downloading 1080p HD stream slice ({section_str}) from {stream_url}...")
 
-    # Strategy 1: Python -m yt_dlp with POT plugin and Node/Deno JS Runtime
+    # Strategy 1: Deno JS Runtime + POT sidecar + Web/iOS client fallback
     cmd = [
         sys.executable, "-m", "yt_dlp",
+        "--js-runtimes", "deno",
         "--extractor-args", "youtubepot-bgutilhttp:base_url=http://127.0.0.1:4416",
-        "--js-runtimes", "node,deno",
+        "--extractor-args", "youtube:player_client=web,ios,mweb",
         "-f", "bestvideo[height<=1080]+bestaudio/best[height<=1080]/best",
         "--download-sections", section_str,
         "--force-keyframes-at-cuts",
@@ -41,10 +42,10 @@ def record_slice_segment(stream_url: str, output_path: str, start_sec: float, du
     except Exception as e:
         print(f"[Downloader] Attempt 1 exception: {e}")
 
-    # Strategy 2: Clean web client with Node/Deno JS runtimes
-    cmd_web = [
+    # Strategy 2: iOS Client direct (often bypasses web bot checks entirely)
+    cmd_ios = [
         sys.executable, "-m", "yt_dlp",
-        "--js-runtimes", "node,deno",
+        "--extractor-args", "youtube:player_client=ios",
         "-f", "bestvideo[height<=1080]+bestaudio/best[height<=1080]/best",
         "--download-sections", section_str,
         "--force-keyframes-at-cuts",
@@ -54,9 +55,9 @@ def record_slice_segment(stream_url: str, output_path: str, start_sec: float, du
     ]
 
     try:
-        res = subprocess.run(cmd_web, capture_output=True, text=True, timeout=180)
+        res = subprocess.run(cmd_ios, capture_output=True, text=True, timeout=180)
         if res.returncode == 0 and os.path.exists(output_path) and os.path.getsize(output_path) > 100000:
-            print(f"[Downloader] SUCCESS (Web Client): Downloaded slice to {output_path} ({os.path.getsize(output_path)} bytes)")
+            print(f"[Downloader] SUCCESS (iOS Client): Downloaded slice to {output_path} ({os.path.getsize(output_path)} bytes)")
             return True
         else:
             print(f"[Downloader] Attempt 2 error: {res.stderr[-300:]}")
