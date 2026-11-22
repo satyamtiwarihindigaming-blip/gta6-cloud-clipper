@@ -119,7 +119,7 @@ def download_subtitles_and_find_viral_moment(video_id: str, temp_dir: str) -> tu
     cmd = [
         sys.executable, "-m", "yt_dlp",
         *cookie_args,
-        "--extractor-args", "youtube:player_client=tv,web_embedded;player_skip=webpage",
+        "--extractor-args", "youtube:player_client=ios,mweb,web",
         "--skip-download",
         "--write-auto-subs",
         "--sub-lang", "hi-orig,hi,en",

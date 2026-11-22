@@ -67,8 +67,8 @@ jobs:
         run: |
           if [ -n "$YOUTUBE_COOKIES" ]; then
             echo "$YOUTUBE_COOKIES" > cookies.txt
+            chmod 666 cookies.txt
             echo "Wrote cookies.txt ($(wc -c < cookies.txt) bytes)"
-            sudo cp cookies.txt /etc/yt-dlp-cookies.txt
           else
             echo "No YOUTUBE_COOKIES secret found"
           fi
@@ -79,20 +79,14 @@ jobs:
           SITE_DIR=$(python -c "import site; print(site.getsitepackages()[0])")
           if [ -d "$SITE_DIR/yt_dlp_plugins" ]; then
             cp -r "$SITE_DIR/yt_dlp_plugins" ~/.config/yt-dlp/plugins/
-            sudo mkdir -p /etc/yt-dlp/plugins
-            sudo cp -r "$SITE_DIR/yt_dlp_plugins" /etc/yt-dlp/plugins/
             echo "Installed yt_dlp_plugins to ~/.config/yt-dlp/plugins/"
           fi
           
           cat << 'EOF' > ~/.config/yt-dlp/config
-          --js-runtimes deno node
+          --js-runtimes deno
           --extractor-args "youtubepot-bgutilhttp:base_url=http://127.0.0.1:4416"
           --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
           EOF
-          if [ -f /etc/yt-dlp-cookies.txt ]; then
-            echo "--cookies /etc/yt-dlp-cookies.txt" >> ~/.config/yt-dlp/config
-          fi
-          sudo cp ~/.config/yt-dlp/config /etc/yt-dlp.conf
           python -m yt_dlp -v || true
 
       - name: Run Autonomous Cloud Clipper Engine
