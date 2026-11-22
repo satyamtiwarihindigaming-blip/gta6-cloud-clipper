@@ -1,7 +1,8 @@
 {
   "processed_moments": [
     651.0,
-    840.0
+    840.0,
+    180.0
   ],
   "posted_clips": [
     {
@@ -21,6 +22,14 @@
       "title": "TECHNO GAMERZ MEETS JASON IN GTA 6! Lucia's Boyfriend Revealed",
       "youtube": "https://youtube.com/shorts/k5m2l1vEhNU",
       "instagram": "https://www.instagram.com/grow10z/"
+    },
+    {
+      "video_id": "169ZzvPxvvM",
+      "creator": "Techno Gamerz",
+      "start_sec": 180.0,
+      "duration": 48.0,
+      "youtube": "https://youtube.com/shorts/hU-sekELk1U",
+      "instagram": "6b02dbbccc364169c14fc8a5"
     }
   ]
 }
