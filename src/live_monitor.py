@@ -91,16 +91,15 @@ def find_target_video() -> tuple[str, str, str]:
         except Exception as e:
             print(f"[Scanner] Query '{query}' error: {e}")
 
-    # Fallback to curated pool, picking the video with least clips
-    sorted_pool = sorted(CURATED_GAMING_VIDEOS, key=lambda x: clip_counts.get(x[0], 0))
-    for vid_id, v_url, title in sorted_pool:
-        if clip_counts.get(vid_id, 0) < 4:
-            print(f"[Scanner] Selected from Curated Pool: {title} ({vid_id}) [Clips: {clip_counts.get(vid_id, 0)}]")
+    # Curated pool prioritizes Techno Gamerz GTA 6, allowing up to 8 unique unclipped moments per 45min video
+    for vid_id, v_url, title in CURATED_GAMING_VIDEOS:
+        if clip_counts.get(vid_id, 0) < 8:
+            print(f"[Scanner] Selected from Pool: {title} ({vid_id}) [Existing Clips: {clip_counts.get(vid_id, 0)}/8]")
             creator = "CarryisLive" if "Carry" in title else "Techno Gamerz"
             return vid_id, v_url, creator
 
-    # If all curated videos reached limit, pick the least used one
-    vid_id, v_url, title = sorted_pool[0]
+    # Fallback
+    vid_id, v_url, title = CURATED_GAMING_VIDEOS[0]
     return vid_id, v_url, "Techno Gamerz"
 
 def download_subtitles_and_find_viral_moment(video_id: str, temp_dir: str) -> tuple[float, float, str, list]:
