@@ -117,7 +117,6 @@ def download_subtitles_and_find_viral_moment(video_id: str, temp_dir: str) -> tu
         sys.executable, "-m", "yt_dlp",
         "--js-runtimes", "deno",
         "--extractor-args", "youtubepot-bgutilhttp:base_url=http://127.0.0.1:4416",
-        "--extractor-args", "youtube:player_client=web,ios,mweb",
         "--skip-download",
         "--write-auto-subs",
         "--sub-lang", "hi-orig,hi,en",
