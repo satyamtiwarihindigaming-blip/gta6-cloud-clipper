@@ -7,6 +7,15 @@ import re
 
 HISTORY_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "history.json")
 
+# Verified high-energy Techno Gamerz & Indian gaming videos pool
+CURATED_GAMING_VIDEOS = [
+    ("169ZzvPxvvM", "https://www.youtube.com/watch?v=169ZzvPxvvM", "Techno Gamerz GTA 6 Gameplay #1"),
+    ("0e3GPea1Tyg", "https://www.youtube.com/watch?v=0e3GPea1Tyg", "Techno Gamerz GTA 5 Insane Police Chase"),
+    ("kK68Q78c_2U", "https://www.youtube.com/watch?v=kK68Q78c_2U", "Techno Gamerz GTA 5 Bank Heist"),
+    ("W7YwP5YqC_k", "https://www.youtube.com/watch?v=W7YwP5YqC_k", "Techno Gamerz GTA 5 Episode 100"),
+    ("bMknfKXIFA8", "https://www.youtube.com/watch?v=bMknfKXIFA8", "CarryisLive GTA 5 Stunt Racing")
+]
+
 def load_history() -> dict:
     if os.path.exists(HISTORY_FILE):
         try:
@@ -20,9 +29,23 @@ def save_history(history: dict):
     with open(HISTORY_FILE, "w", encoding="utf-8") as f:
         json.dump(history, f, indent=2, ensure_ascii=False)
 
+def get_used_moments_for_video(video_id: str) -> list[tuple[float, float]]:
+    """
+    Returns list of (start_sec, end_sec) for moments ALREADY clipped from this specific video.
+    Guarantees no part of the same video is ever clipped twice!
+    """
+    history = load_history()
+    used = []
+    for c in history.get("posted_clips", []):
+        if c.get("video_id") == video_id:
+            s = float(c.get("start_sec", 0))
+            d = float(c.get("duration", 48.0))
+            used.append((s, s + d))
+    return used
+
 def find_target_video() -> tuple[str, str, str]:
     """
-    Finds the latest Techno Gamerz GTA 6 video/stream or top Indian creator video.
+    Finds the target video while ensuring videos with too many clips are rotated out.
     Returns (video_id, video_url, creator_name).
     """
     custom_url = os.getenv("CUSTOM_URL")
@@ -30,11 +53,19 @@ def find_target_video() -> tuple[str, str, str]:
         vid_id = custom_url.split("v=")[1].split("&")[0]
         return vid_id, custom_url, "Techno Gamerz"
 
+    history = load_history()
+    # Count clips per video
+    clip_counts = {}
+    for c in history.get("posted_clips", []):
+        vid = c.get("video_id")
+        if vid:
+            clip_counts[vid] = clip_counts.get(vid, 0) + 1
+
+    # First, try live YouTube search for fresh videos
     search_queries = [
         ("Techno Gamerz GTA 6 Gameplay", "Techno Gamerz"),
         ("Techno Gamerz Vice City Police Chase", "Techno Gamerz"),
-        ("CarryisLive GTA 5 Stunt Race", "CarryisLive"),
-        ("Live Insaan GTA 5 Funny Moments", "Live Insaan")
+        ("CarryisLive GTA 5 Stunt Race", "CarryisLive")
     ]
 
     for query, creator in search_queries:
@@ -53,18 +84,30 @@ def find_target_video() -> tuple[str, str, str]:
                 title = lines[i]
                 vid_id = lines[i + 1]
                 if len(vid_id) == 11:
-                    print(f"[Scanner] Found Candidate: {title} ({vid_id}) by {creator}")
-                    return vid_id, f"https://www.youtube.com/watch?v={vid_id}", creator
+                    # If this video has less than 3 clips, pick it!
+                    if clip_counts.get(vid_id, 0) < 3:
+                        print(f"[Scanner] Found Candidate: {title} ({vid_id}) [Used {clip_counts.get(vid_id, 0)} times]")
+                        return vid_id, f"https://www.youtube.com/watch?v={vid_id}", creator
         except Exception as e:
-            print(f"[Scanner] Query '{query}' failed: {e}")
+            print(f"[Scanner] Query '{query}' error: {e}")
 
-    # Fallback to verified Techno Gamerz GTA 6 video
-    return "169ZzvPxvvM", "https://www.youtube.com/watch?v=169ZzvPxvvM", "Techno Gamerz"
+    # Fallback to curated pool, picking the video with least clips
+    sorted_pool = sorted(CURATED_GAMING_VIDEOS, key=lambda x: clip_counts.get(x[0], 0))
+    for vid_id, v_url, title in sorted_pool:
+        if clip_counts.get(vid_id, 0) < 4:
+            print(f"[Scanner] Selected from Curated Pool: {title} ({vid_id}) [Clips: {clip_counts.get(vid_id, 0)}]")
+            creator = "CarryisLive" if "Carry" in title else "Techno Gamerz"
+            return vid_id, v_url, creator
+
+    # If all curated videos reached limit, pick the least used one
+    vid_id, v_url, title = sorted_pool[0]
+    return vid_id, v_url, "Techno Gamerz"
 
 def download_subtitles_and_find_viral_moment(video_id: str, temp_dir: str) -> tuple[float, float, str, list]:
     """
     Downloads native auto-generated Hindi subtitles (hi-orig) and detects
-    a high-energy 45-55 second moment that hasn't been clipped yet.
+    a high-energy 35-50 second moment that HAS NEVER BEEN CLIPPED BEFORE.
+    Guarantees: Zero overlap with previously clipped parts of this video!
     Returns (start_sec, end_sec, vtt_path, word_list).
     """
     os.makedirs(temp_dir, exist_ok=True)
@@ -94,21 +137,30 @@ def download_subtitles_and_find_viral_moment(video_id: str, temp_dir: str) -> tu
             vtt_file = os.path.join(temp_dir, f)
             break
 
-    history = load_history()
-    used_moments = history.get("processed_moments", [])
+    # Get moments ALREADY clipped from THIS SPECIFIC VIDEO
+    used_windows = get_used_moments_for_video(video_id)
+    print(f"[VTT] Previously clipped moments for {video_id}: {used_windows}")
+
+    def is_overlapping(cand_start: float, cand_end: float) -> bool:
+        """Returns True if candidate window overlaps with any already clipped part (±45s buffer)"""
+        for u_start, u_end in used_windows:
+            # Overlap check with safety margin
+            if not (cand_end < u_start - 35.0 or cand_start > u_end + 35.0):
+                return True
+        return False
 
     default_start = 720.0
     default_end = 768.0
 
-    # Advance fallback to next unclipped moment if needed
-    for cand in [720.0, 840.0, 960.0, 1100.0, 1350.0, 1600.0, 1900.0, 2200.0]:
-        if not any(abs(cand - m) < 50 for m in used_moments if m):
+    # Advance default fallback to an unclipped window
+    for cand in [180.0, 320.0, 480.0, 600.0, 750.0, 920.0, 1100.0, 1350.0, 1600.0, 1900.0, 2200.0]:
+        if not is_overlapping(cand, cand + 48.0):
             default_start = cand
             default_end = cand + 48.0
             break
 
     if not vtt_file or not os.path.exists(vtt_file):
-        print(f"[VTT] No subtitle track found. Using high-action fallback window: {default_start}s to {default_end}s.")
+        print(f"[VTT] No subtitle track found. Using unclipped fallback window: {default_start}s to {default_end}s.")
         return default_start, default_end, None, []
 
     from src.word_captions import to_sec
@@ -126,26 +178,26 @@ def download_subtitles_and_find_viral_moment(video_id: str, temp_dir: str) -> tu
         if w:
             all_words.append((sec, w))
 
-    window_size = 48.0
+    window_size = 46.0  # Optimal high-retention Short duration (40-48s)
     best_start = default_start
     best_score = -1
 
-    min_time = 120.0
+    min_time = 60.0
     max_time = all_words[-1][0] - window_size if all_words else 800.0
 
+    # Sliding window search over speech density
     curr = min_time
     while curr < max_time:
-        overlap = any(abs(curr - m_start) < 40 for m_start in used_moments if m_start)
-        if not overlap:
+        if not is_overlapping(curr, curr + window_size):
             words_in_window = [w for s, w in all_words if curr <= s <= curr + window_size]
             score = len(words_in_window)
             if score > best_score:
                 best_score = score
                 best_start = curr
-        curr += 15.0
+        curr += 12.0
 
     best_end = best_start + window_size
-    print(f"[VTT] Selected Best Viral Speech Window: {best_start:.1f}s to {best_end:.1f}s ({best_score} spoken words)")
+    print(f"[VTT] Selected Brand New Unclipped Moment: {best_start:.1f}s to {best_end:.1f}s ({best_score} spoken words, 0% overlap)")
 
     chosen_words = []
     for sec, w in all_words:

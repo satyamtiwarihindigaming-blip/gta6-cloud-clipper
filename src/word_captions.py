@@ -77,10 +77,13 @@ ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: PopWord,Impact,82,&H0000FFFF,&H00FFFFFF,&H00000000,&HA0000000,-1,0,0,0,105,105,2,0,1,8,4,2,40,40,240,1
+Style: HeaderTitle,Impact,52,&H00FFFFFF,&H00FFFFFF,&H00000000,&H90000000,-1,0,0,0,100,100,2,0,1,6,3,8,40,40,220,1
+Style: PopWord,Impact,78,&H0000FFFF,&H00FFFFFF,&H00000000,&HA0000000,-1,0,0,0,105,105,2,0,1,8,4,2,40,40,340,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.00,0:02:00.00,HeaderTitle,,0,0,0,,TECHNO GAMERZ • GTA 6
+
 """
 
     dialogue_lines = []
