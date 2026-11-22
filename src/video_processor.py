@@ -18,36 +18,19 @@ def convert_to_vertical_short(
       Never covers gameplay or streamer face.
     """
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    temp_dir = os.path.dirname(output_path)
-
-    ass_path = os.path.join(temp_dir, "speech_word_by_word.ass")
-    generate_word_by_word_ass(ass_path, word_list or [], total_duration=duration)
-
-    ass_escaped = ass_path.replace("\\", "/").replace(":", "\\:")
-
-    # Viral Ambient Blurred Background Filter:
+    # Viral Ambient Blurred Background Filter (100% Clean - NO Captions/Subtitles):
     # 1. Split stream into bg and fg
     # 2. bg is scaled to 1080:1920, cropped, blurred heavily, and dimmed
-    # 3. fg is scaled to 1080:608 with lanczos
+    # 3. fg is scaled to 1080:608 with lanczos (sharp original 16:9)
     # 4. fg is centered over bg at y=(1920-608)/2 = 656
-    # 5. ASS subtitles burned over lower third
-    if os.path.exists(ass_path) and os.path.getsize(ass_path) > 300:
-        filter_complex = (
-            "[0:v]split=2[bg_raw][fg_raw];"
-            "[bg_raw]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=28:5,eq=brightness=-0.12[bg];"
-            "[fg_raw]scale=1080:608:flags=lanczos[fg];"
-            "[bg][fg]overlay=0:(1920-608)/2[vbase];"
-            f"[vbase]ass='{ass_escaped}'[vout];"
-            "[0:a]loudnorm=I=-14:LRA=7:tp=-1[aout]"
-        )
-    else:
-        filter_complex = (
-            "[0:v]split=2[bg_raw][fg_raw];"
-            "[bg_raw]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=28:5,eq=brightness=-0.12[bg];"
-            "[fg_raw]scale=1080:608:flags=lanczos[fg];"
-            "[bg][fg]overlay=0:(1920-608)/2[vout];"
-            "[0:a]loudnorm=I=-14:LRA=7:tp=-1[aout]"
-        )
+    # 5. Zero text/captions on video
+    filter_complex = (
+        "[0:v]split=2[bg_raw][fg_raw];"
+        "[bg_raw]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=28:5,eq=brightness=-0.12[bg];"
+        "[fg_raw]scale=1080:608:flags=lanczos[fg];"
+        "[bg][fg]overlay=0:(1920-608)/2[vout];"
+        "[0:a]loudnorm=I=-14:LRA=7:tp=-1[aout]"
+    )
 
     cmd = [
         "ffmpeg", "-y",
