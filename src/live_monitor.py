@@ -4,6 +4,8 @@ import os
 import sys
 import random
 import re
+from src.devanagari_to_hinglish import transliterate_word
+from src.stream_recorder import get_cookie_args
 
 HISTORY_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "history.json")
 
@@ -113,8 +115,10 @@ def download_subtitles_and_find_viral_moment(video_id: str, temp_dir: str) -> tu
     vtt_template = os.path.join(temp_dir, f"{video_id}.%(ext)s")
     
     print(f"[VTT] Downloading auto-subs for {video_id}...")
+    cookie_args = get_cookie_args()
     cmd = [
         sys.executable, "-m", "yt_dlp",
+        *cookie_args,
         "--extractor-args", "youtube:player_client=tv,web_embedded;player_skip=webpage",
         "--skip-download",
         "--write-auto-subs",
@@ -201,8 +205,10 @@ def download_subtitles_and_find_viral_moment(video_id: str, temp_dir: str) -> tu
     chosen_words = []
     for sec, w in all_words:
         if best_start <= sec <= best_end:
-            clean_w = re.sub(r'[^\w\s\u0900-\u097F!?.,\'-]', '', w).strip().upper()
+            clean_w = re.sub(r'[^\w\s\u0900-\u097F!?.,\'-]', '', w).strip()
             if clean_w:
-                chosen_words.append((sec - best_start, clean_w))
+                hinglish_w = transliterate_word(clean_w)
+                if hinglish_w:
+                    chosen_words.append((sec - best_start, hinglish_w))
 
     return best_start, best_end, vtt_file, chosen_words

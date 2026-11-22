@@ -2,6 +2,13 @@ import subprocess
 import os
 import sys
 
+def get_cookie_args():
+    """Returns --cookies flag if cookies.txt exists and is valid."""
+    for candidate in ["cookies.txt", "/etc/yt-dlp-cookies.txt", "youtube_cookies.txt"]:
+        if os.path.exists(candidate) and os.path.getsize(candidate) > 50:
+            return ["--cookies", candidate]
+    return []
+
 def record_slice_segment(stream_url: str, output_path: str, start_sec: float, duration: float = 48.0) -> bool:
     """
     Downloads precision 1080p HD highlight slice using python -m yt_dlp.
@@ -21,10 +28,14 @@ def record_slice_segment(stream_url: str, output_path: str, start_sec: float, du
     base_no_ext = os.path.splitext(output_path)[0]
     out_template = f"{base_no_ext}.%(ext)s"
     target_mp4 = f"{base_no_ext}.mp4"
+    cookie_args = get_cookie_args()
+    if cookie_args:
+        print(f"[Downloader] Using cookies: {cookie_args[1]}")
 
     # Strategy 1: TV & Web_Embedded client with webpage skip (Known cloud datacenter bypass)
     cmd_tv = [
         sys.executable, "-m", "yt_dlp",
+        *cookie_args,
         "--extractor-args", "youtube:player_client=tv,web_embedded;player_skip=webpage",
         "-f", "bestvideo[height<=1080]+bestaudio/best[height<=1080]/best",
         "--download-sections", section_str,
@@ -51,6 +62,7 @@ def record_slice_segment(stream_url: str, output_path: str, start_sec: float, du
     # Strategy 2: POT provider sidecar
     cmd_pot = [
         sys.executable, "-m", "yt_dlp",
+        *cookie_args,
         "--extractor-args", "youtubepot-bgutilhttp:base_url=http://127.0.0.1:4416",
         "--js-runtimes", "deno",
         "-f", "bestvideo[height<=1080]+bestaudio/best[height<=1080]/best",
@@ -78,6 +90,7 @@ def record_slice_segment(stream_url: str, output_path: str, start_sec: float, du
     # Strategy 3: Single format MP4 (18)
     cmd_single = [
         sys.executable, "-m", "yt_dlp",
+        *cookie_args,
         "--extractor-args", "youtube:player_client=tv,web_embedded",
         "-f", "18/best[ext=mp4]/best",
         "--download-sections", section_str,
